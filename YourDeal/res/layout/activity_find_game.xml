@@ -1,0 +1,50 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="#E6E6E6"
+    tools:context=".FindGameActivity" >
+
+    <Button
+        android:id="@+id/join"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:onClick="hostGame"
+        android:text="@string/create" />
+
+    <TableLayout
+        android:id="@+id/currentPlayers"
+        android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        android:layout_above="@+id/join"
+        android:layout_below="@+id/availableGames"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:background="#E6E6E6" >
+
+    </TableLayout>
+
+    <TextView
+        android:id="@+id/availableGames"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:text="@string/availableGames"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="2dp"
+        android:layout_alignBottom="@+id/availableGames"
+        android:layout_alignLeft="@+id/availableGames"
+        android:background="#3399FF" />
+    
+</RelativeLayout>

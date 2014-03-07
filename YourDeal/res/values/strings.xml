@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">YourDeal</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="play">Play</string>
+    <string name="title">Digital Deck</string>
+    <string name="title_activity_select_game">SelectGameActivity</string>
+    <string name="euchre">Euchre</string>
+    <string name="hearts">Hearts</string>
+    <string name="go">Go!</string>
+    <string name="temp">Non-Existant Game Mode</string>
+    <string name="title_activity_find_game">FindGameActivity</string>
+    <string name="create">Create New Game</string>
+    <string name="title_activity_create_game">CreateGameActivity</string>
+    <string name="farmers">Farmers</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="screwTheDealer">Screw The Dealer</string>
+    <string name="host">Create Game</string>
+    <string name="gameType">Game Type</string>
+    <string name="numberOfPlayers">Number Of Players</string>
+    <string name="shootTheMoon">Shoot The Moon</string>
+    <string name="ruleOf100">Rule Of 100</string>
+    <string name="title_activity_lobby">LobbyActivity</string>
+    <string name="settings">Settings</string>
+    <string name="help">Help</string>
+    <string name="name">Name</string>
+    <string name="title_activity_preview_lobby">PreviewLobbyActivity</string>
+    <string name="join">Join Game</string>
+    <string name="currentPlayers">Current Players</string>
+    <string name="options">Options</string>
+    <string name="availableGames">Available Games</string>
+    <string name="description">Description</string>
+    <string name="start">Start Game</string>
+
+</resources>
