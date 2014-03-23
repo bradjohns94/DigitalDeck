@@ -8,10 +8,11 @@ package com.example.digitalDeck;
 
 public class Game { //Note: MAKE ME ABSTRACT
     
-    private int size;
-    private int numPlayers;
-    private String[] players;
-    private String title;
+    protected int size;
+    protected int numPlayers;
+    protected Player[] players;
+    protected String title;
+    protected Server sender;
 
     /**Game constructor
      * Construct a game given a number of players,
@@ -24,8 +25,8 @@ public class Game { //Note: MAKE ME ABSTRACT
     public Game(int gameSize, String gameHost, String gameTitle) {
         size = gameSize;
         numPlayers = 1;
-        players = new String[size];
-        players[0] = gameHost;
+        players = new Player[size];
+        players[0] = new Player(gameHost);
         title = gameTitle;
     }
 
@@ -38,7 +39,7 @@ public class Game { //Note: MAKE ME ABSTRACT
 
     public boolean addPlayer(String newPlayer) {
         if (numPlayers >= size) return false;
-        players[numPlayers] = newPlayer;
+        players[numPlayers] = new RemotePlayer(newPlayer);
         numPlayers++;
         return true;
     }
@@ -52,7 +53,7 @@ public class Game { //Note: MAKE ME ABSTRACT
 
     public boolean removePlayer(String player) {
         for (int i = 0; i < size; i++) {
-            if (players[i].equals(player)) {
+            if (players[i].get("name").equals(player)) {
                 for (int j = i; j < size - 1; j++) {
                     players[j] = players[j + 1];
                 }
@@ -76,14 +77,18 @@ public class Game { //Note: MAKE ME ABSTRACT
     }
 
     public String getHost() {
-        return players[0];
+        return players[0].get("name").toString();
     }
 
     public String getTitle() {
         return title;
     }
 
-    public String[] getPlayers() {
+    public Player[] getPlayers() {
         return players;
+    }
+
+    public void setDelegate(Server server) {
+        sender = server;
     }
 }

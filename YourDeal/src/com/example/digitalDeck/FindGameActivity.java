@@ -190,7 +190,11 @@ public class FindGameActivity extends Activity implements OnClickListener{
 
         Intent toPreviewLobby = new Intent(this, PreviewLobbyActivity.class);
         Bundle players = new Bundle();
-        players.putStringArray(null, games.get(index).getPlayers()); //TODO make a legitimate key
+        String[] playerList = new String[games.get(index).getPlayers().length];
+        for (int i = 0; i < playerList.length; i++) {
+        	playerList[i] = games.get(index).getPlayers()[i].get("name").toString();
+        }
+        players.putStringArray(null, playerList); //TODO make a legitimate key
         toPreviewLobby.putExtras(players);
         startActivity(toPreviewLobby);
     }

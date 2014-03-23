@@ -115,7 +115,11 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
 
         Intent toLobby = new Intent(this, LobbyActivity.class);
         Bundle playerBundle = new Bundle();
-        playerBundle.putStringArray(null, newGame.getPlayers());
+        String[] playerList = new String[newGame.getPlayers().length];
+        for (int i = 0; i < playerList.length; i++) {
+        	playerList[i] = newGame.getPlayers()[i].get("name").toString();
+        }
+        playerBundle.putStringArray(null, playerList);
         toLobby.putExtras(playerBundle);
         toLobby.putExtra("caller", "CreateGameActivity");
         startActivity(toLobby);
