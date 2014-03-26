@@ -32,6 +32,7 @@ public class EuchreGame extends Game{
         super(4, host, title);
         state = 0;
         dealer = 0;
+        scores = new int[2];
         scores[0] = 0;
         scores[1] = 0;
     }
@@ -68,66 +69,63 @@ public class EuchreGame extends Game{
      * that was turned up.
      * In either state the calling player may choose to go alone, nulling out their partner's hand
      */
-    public void chooseTrump() {
-        if (state == 1) { //The initial round of trump calls
-            super.players[playerTurn].put("turn", true); //Ask the player for response
-            String response = queryInput("call", super.players[playerTurn]).toString();
-            super.players[playerTurn].put("turn", false);
-            if (!response.equalsIgnoreCase("pass")) { //If trump as called
-                Boolean alone = (Boolean)queryInput("alone", super.players[playerTurn]);
-                if (alone) { //If the player wants to go alone
-                    int partner = playerTurn + 2;
-                    if (partner > 3) partner -= 4;
-                    super.players[partner].put("hand", null);
-                }
-                caller = playerTurn;
-                String toDrop = queryInput("card", super.players[dealer]).toString(); //Query dealer what they want to do when picking up
-                String[] dealerHand = (String[])super.players[dealer].get("hand");
-                int index = getIndex(dealerHand, toDrop);
-                dealerHand[index] = toDrop;
-                super.players[dealer].put("hand", dealerHand);
-                playerTurn = dealer + 1; //Reset playerTurn
-                if (playerTurn > 3) playerTurn -= 4;
-                state = 3;
-                tricksTaken = new int[2];
-                trickIndex = 0;
-                lead = -1;
-            } else { //If trump was not called
-                if (playerTurn == dealer) state = 2;
-                playerTurn++;
-                if (playerTurn > 3) playerTurn -= 4;
+    public void processCall1(String response) { //False for pass, true for pick it up
+        if (state != 2) return; 
+        if (response.equals("call")) { //If trump as called
+            caller = playerTurn;
+            trump = getSuit(topCard);
+            state = 3;
+        } else { //If trump was not called
+            if (response.equals("farmers")) {
+                //TODO add farmers logic
             }
-        } else if (state == 2) { //The second round of trump calls
-            super.players[playerTurn].put("turn", true);
-            String call = queryInput("call", super.players[playerTurn]).toString();
-            super.players[playerTurn].put("turn", true);
-            if (!call.equalsIgnoreCase("pass")) { //If the player called trump
-                //NOTE: The turned down suit should not be selectable
-                Boolean alone = (Boolean)queryInput("alone", super.players[playerTurn]);
-                if (alone) { //If a loner is called
-                    int partner = playerTurn + 2;
-                    if (partner > 3) partner -= 4;
-                    super.players[partner].put("hand", null);
-                }
-                trump = getIndex(suits, call);
-                caller = playerTurn;
-                state = 3;
-                tricksTaken = new int[2];
-                lead = -1;
-                trickIndex = 0;
-                playerTurn = dealer + 1; //Reset playerTurn
-                if (playerTurn > 3) playerTurn -= 4;
-            } else {
-                //TODO enable screw the dealer option where the dealer may not turn trump down
-                if (playerTurn == dealer) {
-                    dealer++;
-                    if (dealer > 3) dealer -= 4;
-                    state = 0;
-                    startRound();
-                }
-                playerTurn++;
-                if (playerTurn > 3) playerTurn -= 4;
+            state = 1;
+            if (playerTurn == dealer) state = 7;
+            playerTurn++;
+            if (playerTurn > 3) playerTurn -= 4;
+        }
+    }
+
+    public void processDropCard(String toDrop) {
+        String[] dealerHand = (String[]) super.players[dealer].get("hand");
+        int index = getIndex(dealerHand, toDrop);
+        if (index != -1) {
+            dealerHand[index] = toDrop;
+        }
+        super.players[dealer].put("hand", dealerHand);
+        state = 5;
+    }
+
+    public void processLoner(boolean response) {
+        if (response) {
+            int partner = playerTurn + 2;
+            if (partner > 3) partner -= 4;
+            super.players[partner].put("hand", null);
+        }
+        playerTurn = dealer + 1;
+        if (playerTurn > 3) playerTurn -= 4;
+        tricksTaken = new int[2];
+        trickIndex = 0;
+        lead = -1;
+        state = 9;
+    }
+        
+    public void processCall2(String call) {
+        if (state != 4) return;
+        if (!call.equalsIgnoreCase("pass")) { //If the player called trump
+            trump = getIndex(suits, call);
+            caller = playerTurn;
+            state = 5;
+        } else {
+            //TODO enable screw the dealer option where the dealer may not turn trump down
+            state = 7;
+            if (playerTurn == dealer) {
+                dealer++;
+                if (dealer > 3) dealer -= 4;
+                state = 0;
             }
+            playerTurn++;
+            if (playerTurn > 3) playerTurn -= 4;
         }
     }
 
@@ -137,8 +135,8 @@ public class EuchreGame extends Game{
      * recieves a response the card is added to the trick and the
      * playerindex advances
      */
-    public void playRound() {
-        if (state != 3) return;
+    public void processPlay(String play) {
+        if (state != 10) return;
         if (super.players[playerTurn].get("hand") == null) {
             playerTurn++;
             if (playerTurn > 3) playerTurn -= 4;
@@ -146,21 +144,9 @@ public class EuchreGame extends Game{
             trickIndex++;
             return;
         }
-        //Get possible plays
-        int index = 0;
-        String[] hand = (String[])super.players[playerTurn].get("hand");
-        String[] playable = new String[hand.length];
-        for (int i = 0; i < playable.length; i++) {
-            if (canPlay(hand[i])) {
-                playable[index] = hand[i];
-                index++;
-            }
-        }
-        //Get player decision
-        super.players[playerTurn].put("play", playable);
-        String play = queryInput("card", super.players[playerTurn]).toString();
         //Update hand
-        index = 0;
+        String[] hand = (String[])super.players[playerTurn].get("hand");
+        int index = 0;
         String[] newHand = new String[hand.length - 1];
         for (int i = 0; i < hand.length; i++) {
             if (!hand[i].equalsIgnoreCase(play)) {
@@ -179,9 +165,10 @@ public class EuchreGame extends Game{
         trickIndex++;
         playerTurn++;
         if (playerTurn > 3) playerTurn -= 4;
+        state = 9;
         if (trickIndex > 3) {
             trickIndex = 0;
-            state = 4;
+            state = 11;
         }
     }
 
@@ -192,14 +179,14 @@ public class EuchreGame extends Game{
      * the game
      */
     public void processTrick() {
-        if (state != 4) return;
+        if (state != 11) return;
         int winner = findWinner();
         tricksTaken[winner % 2]++;
         playerTurn = winner;
-        if (tricksTaken[0] + tricksTaken[1] == 5) {
-            state = 5;
+        if (tricksTaken[0] + tricksTaken[1] >= 5) {
+            state = 12;
         } else {
-            state = 3;
+            state = 9;
         }
     }
 
@@ -211,7 +198,7 @@ public class EuchreGame extends Game{
      * longer be played.
      */
     public void processDeal() {
-        if (state != 5) return;
+        if (state != 12) return;
         int winningTeam = 0;
         if (tricksTaken[1] >= 3) winningTeam = 1;
         //Determine scoring increment
@@ -223,7 +210,63 @@ public class EuchreGame extends Game{
         } else scores[winningTeam]++;
         dealer++;
         state = 0;
-        if (scores[0] >= 10 || scores[1] >= 10) state = 6; //Game over
+        if (scores[0] >= 10 || scores[1] >= 10) state = 13; //Game over
+    }
+
+    public void requestSignal() {
+        Hashtable<String, Object> dict = new Hashtable<String, Object>();
+        String key = "";
+        switch (state) {
+            case 1:
+                //pick up/pass request
+                key = "turn";
+                break;
+            case 3:
+                //drop card request
+                String[] cards = new String[6];
+                String[] hand = (String[])super.players[dealer].get("hand");
+                for (int i = 0; i < hand.length; i++) {
+                    cards[i] = hand[i];
+                }
+                cards[5] = topCard;
+                key = "drop";
+                dict.put("validCards", cards);
+                break;
+            case 5:
+                //Loner request
+                key = "lone";
+                break;
+            case 7:
+                //make call request
+                int index = 0;
+                String[] calls = new String[4];
+                for (int i = 0; i < suits.length; i++) {
+                    if (i != getSuit(topCard)) {
+                        calls[index] = suits[i];
+                        index++;
+                    }
+                }
+                calls[3] = "pass"; //Disable for dealer if STD is on
+                key = "call";
+                dict.put("validCalls", calls);
+                break;
+            case 9:
+                //play card request
+                index = 0;
+                hand = (String[])super.players[playerTurn].get("hand");
+                String[] playable = new String[hand.length];
+                for (int i = 0; i < playable.length; i++) {
+                    if (canPlay(hand[i])) {
+                        playable[index] = hand[i];
+                    }
+                }
+                key = "play";
+                dict.put("validCards", playable);
+                break;
+        }
+        dict.put("action", key);
+        super.players[playerTurn].updateProperties(dict);
+        state++;
     }
 
     /**makeDeck
@@ -249,6 +292,12 @@ public class EuchreGame extends Game{
             }
         }
         return deck;
+    }
+
+    public void requestRespones() {
+        switch (state) {
+            
+        }
     }
 
     /**deal
@@ -293,6 +342,13 @@ public class EuchreGame extends Game{
 
     private int getSuit(String card) {
         String suit = card.substring(1, 2);
+        if (isLeft(card)) {
+            if (trump % 2 == 0) {
+                return trump + 1;
+            } else {
+                return trump - 1;
+            }
+        }
         for (int i = 0; i < suits.length; i++) {
             if (suit.equals(suits[i])) return i;
         }
@@ -400,9 +456,37 @@ public class EuchreGame extends Game{
                 super.players[team + 2].get("hand") == null);
     }
 
-    private Object queryInput(String key, Player toQuery) {
-        //TODO find dictionary from network stream
-        //TODO return value from given key in dictionary
-        return null;
+    @Override
+    public void process(Object signal) {
+        if (state % 2 == 1) {
+            if (state < 10) requestSignal();
+        }
+        switch (state) {
+            case 0:
+                startRound();
+                break;
+            case 2:
+                processCall1(signal.toString());
+                break;
+            case 4:
+                processDropCard(signal.toString());
+                break;
+            case 6:
+                processLoner((Boolean)signal);
+                break;
+            case 8:
+                processCall2(signal.toString());
+                break;
+            case 10:
+                processPlay(signal.toString());
+                break;
+            case 11:
+                processTrick();
+                break;
+            case 12: 
+                processDeal();
+                break;
+        }
     }
+
 }

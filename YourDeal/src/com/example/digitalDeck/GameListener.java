@@ -28,7 +28,7 @@ public class GameListener implements NsdManager.DiscoveryListener {
     public void onServiceFound(NsdServiceInfo service) {
         Log.i("stuff", "Service named " + service.getServiceName() + " found.");
         if (!services.contains(service)) {
-            games.add(new Game(4, "Host", service.getServiceName()));
+            games.add(new EuchreGame("Host", service.getServiceName()));
             services.add(service);
         }
 

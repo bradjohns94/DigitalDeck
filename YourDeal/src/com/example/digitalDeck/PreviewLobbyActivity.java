@@ -95,10 +95,6 @@ public class PreviewLobbyActivity extends Activity {
 
     public void openLobby(View clicked) {
         Intent toLobby = new Intent(this, LobbyActivity.class);
-        boolean isHost = false;
-        Bundle playerBundle = new Bundle();
-        playerBundle.putStringArray(null, gamePlayers); //TODO make a legitimate key
-        toLobby.putExtras(playerBundle);
         toLobby.putExtra("caller", "PreviewLobbyActivity");
         startActivity(toLobby);
     }

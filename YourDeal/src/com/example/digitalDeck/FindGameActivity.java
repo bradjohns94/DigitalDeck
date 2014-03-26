@@ -10,11 +10,8 @@
 
 package com.example.digitalDeck;
 
-import android.content.Context;
-import android.net.nsd.NsdManager;
-import android.net.nsd.NsdServiceInfo;
-import android.os.Bundle;
 import android.app.Activity;
+import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.view.*;
 import android.view.View.OnClickListener;
@@ -23,19 +20,20 @@ import android.content.Intent;
 import android.widget.*;
 import android.graphics.Color;
 
+import java.io.IOException;
 import java.util.ArrayList;
+
+import javax.jmdns.*;
 
 import com.example.yourdeal.R;
 
-public class FindGameActivity extends Activity implements OnClickListener{
+public class FindGameActivity extends Activity implements OnClickListener {
 
-    private ArrayList<NsdServiceInfo> availableServices;
     private ArrayList<TableRow> gameRows;
-    private ArrayList<Game> games;
-    NsdManager man;
-
-
-
+    private ArrayList<Service> games;
+    android.net.wifi.WifiManager.MulticastLock lock;
+    JmDNS jmdns;
+    
     /**onCreate
      * Set the title of the activity and display the activity
      */
@@ -45,27 +43,33 @@ public class FindGameActivity extends Activity implements OnClickListener{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_find_game);
         gameRows = new ArrayList<TableRow>();
-        games = new ArrayList<Game>();
-        createDiscoveryListener(games);
-        games.add(new Game(4, "Bruce Wayne", "Batgame"));
+        games = new ArrayList<Service>();
+        /*games.add(new EuchreGame("Bruce Wayne", "Batgame"));
         games.get(0).addPlayer("Hal Jordan");
         games.get(0).addPlayer("Barry Allan");
-        games.add(new Game(4, "Arthur Curry", "Go Fish with Aquaman"));
+        games.add(new EuchreGame("Arthur Curry", "Go Fish with Aquaman"));
         games.get(1).addPlayer("Mera");
-        games.get(1).addPlayer("Flounder");
+        games.get(1).addPlayer("Flounder");*/
 		// Show the Up button in the action bar.
 		setupActionBar();
 
         //get the text passed in from select game
         String title = "Games Near You";
+        
+        new Thread() {
+            public void run() {
+                try {
+                    jmdns = JmDNS.create();
+                    jmdns.addServiceListener("_DigitalDeck._tcp.local.", new listener());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
 
         setTitle(title);
         drawGames();
-	}
-
-	/**
-	 * Set up the {@link android.app.ActionBar}.
-	 */
+	} /** * Set up the {@link android.app.ActionBar}.  */
 	private void setupActionBar() {
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -123,6 +127,27 @@ public class FindGameActivity extends Activity implements OnClickListener{
         Intent toCreate = new Intent(this, CreateGameActivity.class);
         startActivity(toCreate);
     }
+    
+    @Override
+	protected void onDestroy() {
+    	super.onDestroy();
+    	//if(lock != null) lock.release();
+    }
+    
+    @Override
+	protected void onStop() {
+    	if (jmdns != null) {
+    		/*jmdns.unregisterAllServices();
+            try {
+                jmdns.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }*/
+    	}
+    	//lock.release();
+    	super.onStop();
+    }
 
     /**findGames
      * finds local games and converts them into a proper list
@@ -147,7 +172,7 @@ public class FindGameActivity extends Activity implements OnClickListener{
             row.addView(title);
 
             //Text view for the current number of players
-            String statusText = games.get(i).getNumPlayers() + "/" + games.get(i).getSize() + " Players";
+            String statusText = games.get(i).getPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
             TextView status = new TextView(this);
             status.setText(statusText);
             status.setTextAppearance(this, android.R.style.TextAppearance_Large);
@@ -167,14 +192,6 @@ public class FindGameActivity extends Activity implements OnClickListener{
         }
     }
 
-    public void createDiscoveryListener(ArrayList<Game> games) {
-        GameListener mDiscoveryListener = new GameListener(games);
-        Context c = this;
-        man = (NsdManager)c.getSystemService(Context.NSD_SERVICE);
-        man.discoverServices(
-                "_DigitalDeck._tcp.", NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
-    }
-
     @Override
 	public void onClick(View clicked) {
         TableRow clickedRow = (TableRow)clicked;
@@ -188,15 +205,68 @@ public class FindGameActivity extends Activity implements OnClickListener{
             }
         }
 
-        Intent toPreviewLobby = new Intent(this, PreviewLobbyActivity.class);
-        Bundle players = new Bundle();
-        String[] playerList = new String[games.get(index).getPlayers().length];
-        for (int i = 0; i < playerList.length; i++) {
-        	playerList[i] = games.get(index).getPlayers()[i].get("name").toString();
-        }
-        players.putStringArray(null, playerList); //TODO make a legitimate key
-        toPreviewLobby.putExtras(players);
+        Intent toPreviewLobby = new Intent(this, LobbyActivity.class);
+        Service serv = games.get(index);
+        toPreviewLobby.putExtra("title", serv.getTitle());
+        toPreviewLobby.putExtra("type", serv.getType());
+        toPreviewLobby.putExtra("numPlayers", Integer.toString(serv.getPlayers()));
+        toPreviewLobby.putExtra("port", serv.getPort());
+        toPreviewLobby.putExtra("caller", "PreviewLobbyActivity");
+        Bundle ips = new Bundle();
+        String[] addr = serv.getIPs();
+        ips.putStringArray("ips", addr);
+        toPreviewLobby.putExtras(ips);
         startActivity(toPreviewLobby);
     }
-
+    
+    private class listener implements ServiceListener {
+        /*Delegation methods
+         * They do magic JmDNS stuff
+         * I'll talk more about these later
+         */
+        
+        //TODO literally everything
+        public void serviceAdded(ServiceEvent event) {
+            //This does nothing
+            System.out.println("Oh hai, I added a service");
+        }
+        
+        public void serviceRemoved(ServiceEvent event) {
+            ServiceInfo info = event.getInfo();
+            String title = info.getPropertyString("title");
+            for (Service g : games) {
+                if (g.getTitle().equals(title)) {
+                    games.remove(g);
+                    break;
+                }
+            }
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    drawGames();
+                }
+            });
+        }
+        
+        public void serviceResolved(ServiceEvent event) {
+            //TODO create list item
+            ServiceInfo info = event.getInfo();
+            String title = info.getPropertyString("gameTitle");
+            String gameType = info.getPropertyString("gameType");
+            String playerCount = info.getPropertyString("playerCount");
+            java.net.InetAddress[] adr = info.getInetAddresses();
+            String[] ips = new String[adr.length];
+            for (int i = 0; i < adr.length; i++) {
+            	ips[i] = adr[i].toString();
+            }
+            String port = Integer.toString(info.getPort());
+            Service game = new Service(title, gameType, Integer.parseInt(playerCount), ips, port);
+            int players = Integer.parseInt(playerCount);
+            games.add(game);
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    drawGames();
+                }
+            });
+        }
+    }
 }

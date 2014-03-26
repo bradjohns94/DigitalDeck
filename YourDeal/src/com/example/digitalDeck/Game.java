@@ -6,13 +6,14 @@
 
 package com.example.digitalDeck;
 
-public class Game { //Note: MAKE ME ABSTRACT
+public abstract class Game { //Note: MAKE ME ABSTRACT
     
     protected int size;
     protected int numPlayers;
     protected Player[] players;
     protected String title;
     protected Server sender;
+    protected Object input;
 
     /**Game constructor
      * Construct a game given a number of players,
@@ -29,6 +30,8 @@ public class Game { //Note: MAKE ME ABSTRACT
         players[0] = new Player(gameHost);
         title = gameTitle;
     }
+
+    public void process(Object signal) { };
 
     /**addPlayer
      * if the game is not full adds a player to the game and
@@ -90,5 +93,9 @@ public class Game { //Note: MAKE ME ABSTRACT
 
     public void setDelegate(Server server) {
         sender = server;
+    }
+
+    public void getInput(Object newInput) {
+        input = newInput;
     }
 }

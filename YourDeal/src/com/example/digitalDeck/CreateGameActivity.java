@@ -99,8 +99,8 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         //TODO customize game type by specifics
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String hostName = prefs.getString("display_name", "Unknown");
-        Game newGame = new Game(4, hostName, title);
-        final HashMap<String, String> props = new HashMap<String, String>();
+        EuchreGame newGame = new EuchreGame(hostName, title);
+        /*final HashMap<String, String> props = new HashMap<String, String>();
         props.put("gameType", gameMode);
         props.put("hostUser", hostName);
         props.put("playerCount", "1");
@@ -109,19 +109,21 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         	jmdns = JmDNS.create();
 			createService(props);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}}}.start();
+		}}}.start();*/
 
         Intent toLobby = new Intent(this, LobbyActivity.class);
         Bundle playerBundle = new Bundle();
         String[] playerList = new String[newGame.getPlayers().length];
         for (int i = 0; i < playerList.length; i++) {
+        	if (newGame.getPlayers()[i] == null) break;
         	playerList[i] = newGame.getPlayers()[i].get("name").toString();
         }
         playerBundle.putStringArray(null, playerList);
         toLobby.putExtras(playerBundle);
         toLobby.putExtra("caller", "CreateGameActivity");
+        toLobby.putExtra("gameType", gameMode);
+        toLobby.putExtra("title", title);
         startActivity(toLobby);
     }
 
@@ -146,28 +148,7 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
     	ServiceInfo serviceInfo = ServiceInfo.create("_DigitalDeck._tcp.local.", props.get("gameTitle"), 36241, 0, 0, props);
     	jmdns.registerService(serviceInfo);
     }
-    
-    @Override
-	protected void onDestroy() {
-    	super.onDestroy();
-    	//if(lock != null) lock.release();
-    }
-    
-    @Override
-	protected void onStop() {
-    	if (jmdns != null) {
-    		/*jmdns.unregisterAllServices();
-            try {
-                jmdns.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }*/
-    	}
-    	lock.release();
-    	super.onStop();
-    }
-    
+
     @Override
 	public void onClick(View clicked) {
         final TableRow clickedRow = (TableRow)clicked;
