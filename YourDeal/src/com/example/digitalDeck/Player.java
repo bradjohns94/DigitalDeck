@@ -11,6 +11,8 @@ import java.util.*;
 
 public class Player {
 	
+	private EuchreUIActivity UI;
+	
 	protected Hashtable<String, Object> properties;
 
     /**Player constructor
@@ -47,8 +49,9 @@ public class Player {
      * player information in the game. Uses a helper method in order to better
      * handle recursive cases
      */
-    public void updateProperties(Dictionary<String, Object> update) {
+    public void updateProperties(Hashtable<String, Object> update) {
         helperUpdate(update, properties);
+        UI.updateUI();
     }
     
     /**helperUpdate
@@ -79,7 +82,11 @@ public class Player {
      * @return the properties dictionary
      * returns the properties of the player object
      */
-    private Dictionary<String, Object> getProperties() {
+    private Hashtable<String, Object> getProperties() {
         return properties;
+    }
+    
+    public void setUI(EuchreUIActivity euchre) {
+    	UI = euchre;
     }
 }

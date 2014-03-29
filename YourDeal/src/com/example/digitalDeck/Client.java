@@ -16,6 +16,10 @@ public class Client {
         serverOut = out;
         serverIn = in;
     }
+    
+    public void start(EuchreUIActivity euchre) {
+    	//TODO make this
+    }
 
     public void updateProperties() {
         CommunicationThread commThread = new CommunicationThread();

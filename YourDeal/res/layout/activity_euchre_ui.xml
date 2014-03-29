@@ -1,0 +1,184 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/backrepeat"
+    android:visibility="visible"
+    tools:context="com.example.digitalDeck.EuchreUIActivity"
+    tools:ignore="MergeRootFrame" >
+
+    <TextView
+        android:id="@+id/trump"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/trump"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/tricksWon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/trump"
+        android:text="@string/tricksWon"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/tricksLost"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/tricksWon"
+        android:text="@string/tricksLost"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/yourScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/tricksWon"
+        android:layout_above="@+id/opponentScore"
+        android:layout_alignLeft="@+id/opponentScore"
+        android:text="@string/yourScore"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/partner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/trump"
+        android:layout_above="@+id/opponentScore"
+        android:layout_alignLeft="@+id/yourScore"
+        android:text="@string/partner"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/opponentScore"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/tricksLost"
+        android:layout_alignBottom="@+id/tricksLost"
+        android:layout_alignParentRight="true"
+        android:text="@string/opponentScore"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <ImageView
+        android:id="@+id/trumpPic"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/tricksWon"
+        android:layout_alignParentTop="true"
+        android:layout_alignRight="@+id/tricksLost"
+        android:layout_toRightOf="@+id/trump"
+        android:src="@drawable/spades"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:text="@string/message"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/partnerCard"
+        android:layout_width="50dp"
+        android:layout_height="70dp"
+        android:layout_alignTop="@+id/yourScore"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/qc"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/rightPlayerCard"
+        android:layout_width="50dp"
+        android:layout_height="70dp"
+        android:layout_alignTop="@+id/opponentScore"
+        android:layout_toRightOf="@+id/partnerCard"
+        android:src="@drawable/qs"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/playerCard"
+        android:layout_width="50dp"
+        android:layout_height="70dp"
+        android:layout_below="@+id/partnerCard"
+        android:layout_toLeftOf="@+id/rightPlayerCard"
+        android:src="@drawable/jd"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/leftPlayerCard"
+        android:layout_width="50dp"
+        android:layout_height="70dp"
+        android:layout_alignTop="@+id/rightPlayerCard"
+        android:layout_toLeftOf="@+id/partnerCard"
+        android:src="@drawable/as"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/hand3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:cropToPadding="true"
+        android:visibility="invisible"
+        android:onClick="processInput"
+        android:src="@drawable/ah" />
+
+    <ImageView
+        android:id="@+id/hand2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/hand3"
+        android:src="@drawable/jc"
+        android:onClick="processInput"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/hand4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/hand3"
+        android:visibility="invisible"
+        android:onClick="processInput"
+        android:src="@drawable/qd" />
+
+    <ImageView
+        android:id="@+id/hand5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@+id/hand4"
+        android:visibility="invisible"
+        android:onClick="processInput" 
+        android:src="@drawable/td" />
+
+    <ImageView
+        android:id="@+id/hand1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/hand2"
+        android:src="@drawable/nd"
+        android:onClick="processInput"
+        android:visibility="invisible" />
+
+    <ImageView
+        android:id="@+id/topCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/opponentScore"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/ad"
+        android:onClick="processInput"
+        android:visibility="invisible" />
+
+</RelativeLayout>

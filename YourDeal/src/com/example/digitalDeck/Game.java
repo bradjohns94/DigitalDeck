@@ -6,14 +6,19 @@
 
 package com.example.digitalDeck;
 
-public abstract class Game { //Note: MAKE ME ABSTRACT
+import java.util.Hashtable;
+
+import org.json.JSONObject;
+
+public abstract class Game {
     
     protected int size;
     protected int numPlayers;
     protected Player[] players;
     protected String title;
-    protected Server sender;
+    protected Delegate sender;
     protected Object input;
+    private EuchreUIActivity UI;
 
     /**Game constructor
      * Construct a game given a number of players,
@@ -29,9 +34,10 @@ public abstract class Game { //Note: MAKE ME ABSTRACT
         players = new Player[size];
         players[0] = new Player(gameHost);
         title = gameTitle;
+        sender = YourDealApplication.delegate;
     }
 
-    public void process(Object signal) { };
+    public void process(JSONObject info) { };
 
     /**addPlayer
      * if the game is not full adds a player to the game and
@@ -91,11 +97,11 @@ public abstract class Game { //Note: MAKE ME ABSTRACT
         return players;
     }
 
-    public void setDelegate(Server server) {
+    public void setDelegate(Delegate server) {
         sender = server;
     }
 
-    public void getInput(Object newInput) {
-        input = newInput;
+    public void setUI(EuchreUIActivity euchreGame) {
+    	UI = euchreGame;
     }
 }

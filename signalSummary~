@@ -1,0 +1,27 @@
+Signals
+==================================================
+
+"target" : String -> distinguishes player from game requests
+
+player signals:
+	"hand" : String[]
+	"partner" : String
+	"action" : String
+	"addPlayer" : String
+	"removePlayer" : String
+
+	action options:
+		"turn" : boolean -> pick up/pass query
+		"drop" : String[]-> dealer put down card query
+		"lone" : boolean -> go alone query
+		"call" : String[]-> pick trump request
+		"play" : String[]-> play card request
+
+game signals:
+	"tricksTaken" : int[]
+	"players" : String[]
+	"cardPlayed" : String
+	"topCard" : String
+	"scores" : int[]
+	"trump" : String
+	

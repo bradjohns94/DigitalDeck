@@ -2,22 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.yourdeal"
     android:versionCode="1"
+    android:name=".YourDealApplication"
     android:versionName="1.0" >
 
     <uses-permission
-        android:required="true"
-        android:name="android.permission.ACCESS_WIFI_STATE"/>
+        android:name="android.permission.ACCESS_WIFI_STATE"
+        android:required="true" />
     <uses-permission
-        android:required="true"
-        android:name="android.permission.CHANGE_WIFI_STATE"/>
+        android:name="android.permission.CHANGE_WIFI_STATE"
+        android:required="true" />
     <uses-permission
-        android:required="true"
-        android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+        android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"
+        android:required="true" />
     <uses-permission
-        android:required="true"
-        android:name="android.permission.INTERNET"/>
+        android:name="android.permission.INTERNET"
+        android:required="true" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" >
-	</uses-permission>
+    </uses-permission>
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -37,9 +38,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.example.yourdeal.StartActivity" />
+
+        <meta-data
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value="com.example.yourdeal.StartActivity" />
+
         <activity
             android:name="com.example.digitalDeck.SettingsActivity"
             android:label="@string/title_activity_settings" >
@@ -75,6 +78,16 @@
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.yourdeal.FindGameActivity" />
+        </activity>
+        <activity
+            android:name="com.example.digitalDeck.EuchreUIActivity"
+            android:label="@string/title_activity_euchre_ui"
+            android:theme="@android:style/Theme.NoTitleBar"
+            android:screenOrientation="landscape"
+            android:parentActivityName="com.example.digitalDeck.FindGameActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.digitalDeck.FindGameActivity" />
         </activity>
     </application>
 

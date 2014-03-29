@@ -24,9 +24,11 @@ public class RemotePlayer extends Player{
      * the server to inform the client on the foreign device
      */
     @Override
-    public void updateProperties(Dictionary<String, Object> update) {
+    public void updateProperties(Hashtable<String, Object> update) {
         super.updateProperties(update);
-        sender.updateProperties(this, update);
+        Hashtable<Object, Hashtable<String, Object>> udate = new Hashtable<Object, Hashtable<String, Object>>();
+        udate.put(this, update);
+        sender.updateProperties(udate);
     }
 
     /**put
@@ -38,7 +40,9 @@ public class RemotePlayer extends Player{
         super.put(key, value);
         Hashtable<String, Object> newDict = new Hashtable<String, Object>();
         newDict.put(key, value);
-        sender.updateProperties(this, newDict);
+        Hashtable<Object, Hashtable<String, Object>> update = new Hashtable<Object, Hashtable<String, Object>>();
+        update.put(this, newDict);
+        sender.updateProperties(update);
     }
 
     /**setDelegate

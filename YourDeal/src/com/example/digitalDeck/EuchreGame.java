@@ -2,6 +2,9 @@ package com.example.digitalDeck;
 
 import java.util.*;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 //TODO: group puts to make more efficient
 public class EuchreGame extends Game{
 
@@ -20,6 +23,7 @@ public class EuchreGame extends Game{
     private String topCard;
     private int trump; //The index in the suits array for trump
     private int lead; //The suit that was lead
+    private Server server;
 
     /**EuchreGame constructor
      * @param host the player who created the game
@@ -33,8 +37,12 @@ public class EuchreGame extends Game{
         state = 0;
         dealer = 0;
         scores = new int[2];
+        kitty = new String[3];
+        trick = new String[4];
+        tricksTaken = new int[2];
         scores[0] = 0;
         scores[1] = 0;
+        server = (Server)YourDealApplication.delegate;
     }
 
     /**startRound
@@ -44,19 +52,26 @@ public class EuchreGame extends Game{
      */
     public void startRound() {
         if (state != 0) return; //Stop from being called at the wrong time
+        System.out.println("Starting round");
         String hands[][] = new String[4][5];
         kitty = new String[3];
         String[] deck = makeDeck();
         topCard = deal(deck, hands);
+        Hashtable<Object, Hashtable<String, Object>> updates = new Hashtable<Object, Hashtable<String, Object>>();
         for (int i = 0; i < super.players.length; i++) {
-            super.players[i].put("hand", hands[i]);
+        	Hashtable<String, Object> playerUpdate = new Hashtable<String, Object>();
+        	playerUpdate.put("target", "player");
+            playerUpdate.put("hand", hands[i]);
+            updates.put(players[i], playerUpdate);
         }
+        YourDealApplication.delegate.updateProperties(updates);
         state = 1;
         playerTurn = dealer + 1;
-        Hashtable<String, Object> update = new Hashtable<String, Object>();
-        update.put("topCard", topCard);
-        update.put("state", state);
-        super.sender.updateGame(update);
+        trump = -1;
+        Hashtable<String, Object> gameUpdate = new Hashtable<String, Object>();
+        gameUpdate.put("target", "game");
+        gameUpdate.put("topCard", topCard);
+        server.updateGame(gameUpdate);
     }
 
     /**chooseTrump
@@ -74,6 +89,10 @@ public class EuchreGame extends Game{
         if (response.equals("call")) { //If trump as called
             caller = playerTurn;
             trump = getSuit(topCard);
+            Hashtable<String, Object> updates = new Hashtable<String, Object>();
+            updates.put("target", "game");
+            updates.put("trump", suits[trump]);
+            server.updateGame(updates);
             state = 3;
         } else { //If trump was not called
             if (response.equals("farmers")) {
@@ -83,6 +102,8 @@ public class EuchreGame extends Game{
             if (playerTurn == dealer) state = 7;
             playerTurn++;
             if (playerTurn > 3) playerTurn -= 4;
+            JSONObject empty = new JSONObject();
+            process(empty);
         }
     }
 
@@ -90,10 +111,17 @@ public class EuchreGame extends Game{
         String[] dealerHand = (String[]) super.players[dealer].get("hand");
         int index = getIndex(dealerHand, toDrop);
         if (index != -1) {
-            dealerHand[index] = toDrop;
+            dealerHand[index] = topCard;
         }
-        super.players[dealer].put("hand", dealerHand);
+        Hashtable<String, Object> playerUpdate = new Hashtable<String, Object>();
+        playerUpdate.put("target", "player");
+        playerUpdate.put("hand", "dealerHand");
+        Hashtable<Object, Hashtable<String, Object>> update = new Hashtable<Object, Hashtable<String, Object>>();
+        update.put(players[dealer], playerUpdate);
+        YourDealApplication.delegate.updateProperties(update);
+        JSONObject empty = new JSONObject();
         state = 5;
+        process(empty);
     }
 
     public void processLoner(boolean response) {
@@ -115,6 +143,10 @@ public class EuchreGame extends Game{
         if (!call.equalsIgnoreCase("pass")) { //If the player called trump
             trump = getIndex(suits, call);
             caller = playerTurn;
+            Hashtable<String, Object> updates = new Hashtable<String, Object>();
+            updates.put("target", "game");
+            updates.put("trump", suits[trump]);
+            server.updateGame(updates);
             state = 5;
         } else {
             //TODO enable screw the dealer option where the dealer may not turn trump down
@@ -126,6 +158,8 @@ public class EuchreGame extends Game{
             }
             playerTurn++;
             if (playerTurn > 3) playerTurn -= 4;
+            JSONObject empty = new JSONObject();
+            process(empty);
         }
     }
 
@@ -154,7 +188,11 @@ public class EuchreGame extends Game{
                 index++;
             }
         }
-        super.players[playerTurn].put("hand", newHand);
+        Hashtable<String, Object> playerUpdate = new Hashtable<String, Object>();
+        playerUpdate.put("target", "player");
+        playerUpdate.put("hand", newHand);
+        Hashtable<Object, Hashtable<String, Object>> update = new Hashtable<Object, Hashtable<String, Object>>();
+        YourDealApplication.delegate.updateProperties(update);
         //Process lead card
         if (lead == -1) {
             lead = getSuit(play);
@@ -170,6 +208,9 @@ public class EuchreGame extends Game{
             trickIndex = 0;
             state = 11;
         }
+        Hashtable<String, Object> played = new Hashtable<String, Object>();
+        played.put("cardPlayed", play);
+        server.updateGame(played);
     }
 
     /**processTrick
@@ -188,6 +229,10 @@ public class EuchreGame extends Game{
         } else {
             state = 9;
         }
+        Hashtable<String, Object> updates = new Hashtable<String, Object>();
+        updates.put("target", "game");
+        updates.put("tricks", tricksTaken);
+        server.updateGame(updates);
     }
 
     /**processDeal
@@ -211,10 +256,15 @@ public class EuchreGame extends Game{
         dealer++;
         state = 0;
         if (scores[0] >= 10 || scores[1] >= 10) state = 13; //Game over
+        Hashtable<String, Object> updates = new Hashtable<String, Object>();
+        updates.put("target", "game");
+        updates.put("scores", scores);
+        server.updateGame(updates);
     }
 
     public void requestSignal() {
         Hashtable<String, Object> dict = new Hashtable<String, Object>();
+        dict.put("target", "player");
         String key = "";
         switch (state) {
             case 1:
@@ -284,7 +334,7 @@ public class EuchreGame extends Game{
             val = rand.nextInt(6);
             suit = rand.nextInt(4);
             String card = vals[val] + suits[suit];
-            if (getIndex(deck, card) != -1) {
+            if (getIndex(deck, card) == -1) {
                 deck[i] = card;
             } else {
                 i--;
@@ -457,28 +507,36 @@ public class EuchreGame extends Game{
     }
 
     @Override
-    public void process(Object signal) {
+    public void process(JSONObject info) {
+    	System.out.println("processing state " + state);
         if (state % 2 == 1) {
             if (state < 10) requestSignal();
         }
+        String key = null;
+        try {
+        	key = info.get("action").toString();
+        } catch(JSONException e) {
+        	e.printStackTrace();
+        }
+        try {
         switch (state) {
             case 0:
                 startRound();
                 break;
             case 2:
-                processCall1(signal.toString());
+                processCall1(info.get(key).toString());
                 break;
             case 4:
-                processDropCard(signal.toString());
+                processDropCard(info.get(key).toString());
                 break;
             case 6:
-                processLoner((Boolean)signal);
+                processLoner((Boolean)info.get(key));
                 break;
             case 8:
-                processCall2(signal.toString());
+                processCall2(info.get(key).toString());
                 break;
             case 10:
-                processPlay(signal.toString());
+                processPlay(info.get(key).toString());
                 break;
             case 11:
                 processTrick();
@@ -487,6 +545,32 @@ public class EuchreGame extends Game{
                 processDeal();
                 break;
         }
+        } catch (JSONException e) {
+        	e.printStackTrace();
+        }
     }
-
+    
+    public Hashtable<String, Object> getUIInfo(String displayName) {
+    	Hashtable<String, Object> props = new Hashtable<String, Object>();
+    	int playerIndex = -1;
+    	for (int i = 0; i < players.length; i++) {
+    		if (players[i].get("name").toString().equals(displayName)) playerIndex = i;
+    	}
+    	props.put("index", playerIndex);
+    	props.put("scores", scores);
+    	props.put("tricksTaken", tricksTaken);
+    	props.put("trick", trick);
+    	if (trump != -1) {
+    		props.put("trump", suits[trump]);
+    	} else {
+    		props.put("trump", "none");
+    	}
+    	return props;
+    }
+    
+    public String getPartner(int playerIndex) {
+    	int partnerIndex = playerIndex + 2;
+    	if (partnerIndex > 3) partnerIndex -= 4;
+    	return players[partnerIndex].get("name").toString();
+    }
 }

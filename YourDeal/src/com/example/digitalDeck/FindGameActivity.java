@@ -233,7 +233,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
         
         public void serviceRemoved(ServiceEvent event) {
             ServiceInfo info = event.getInfo();
-            String title = info.getPropertyString("title");
+            String title = info.getName();
             for (Service g : games) {
                 if (g.getTitle().equals(title)) {
                     games.remove(g);
@@ -250,7 +250,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
         public void serviceResolved(ServiceEvent event) {
             //TODO create list item
             ServiceInfo info = event.getInfo();
-            String title = info.getPropertyString("gameTitle");
+            String title = info.getName();
             String gameType = info.getPropertyString("gameType");
             String playerCount = info.getPropertyString("playerCount");
             java.net.InetAddress[] adr = info.getInetAddresses();

@@ -34,5 +34,13 @@
     <string name="availableGames">Available Games</string>
     <string name="description">Description</string>
     <string name="start">Start Game</string>
+    <string name="title_activity_euchre_ui">EuchreUIActivity</string>
+    <string name="trump">Trump: </string>
+    <string name="tricksWon">Tricks Won: </string>
+    <string name="tricksLost">Tricks Lost: </string>
+    <string name="partner">Partner: </string>
+    <string name="yourScore">"Your Score: "</string>
+    <string name="opponentScore">"Opponent Score: "</string>
+    <string name="message">Display Message</string>
 
 </resources>
