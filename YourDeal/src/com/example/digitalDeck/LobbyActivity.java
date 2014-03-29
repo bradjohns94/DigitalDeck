@@ -176,6 +176,7 @@ public class LobbyActivity extends Activity {
     @Override
 	protected void onStop() {
     	if (jmdns != null) {
+    		jmdns.unregisterAllServices();
     	}
     	lock.release();
     	super.onStop();
