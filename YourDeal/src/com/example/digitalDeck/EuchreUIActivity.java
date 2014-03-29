@@ -3,12 +3,25 @@ package com.example.digitalDeck;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.example.yourdeal.R;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.widget.*;
 import android.view.*;
+
+/**EuchreUIActivity
+ * @author Bradley Johns
+ * The UI for the euchre game type itself, displays the users
+ * hand, the trick so far, the top card if applicable, the number
+ * of tricks taken by each team, each team's score, the current trump,
+ * and the player who is displaying the UI's partner.
+ */
 
 public class EuchreUIActivity extends Activity {
 	
@@ -17,12 +30,15 @@ public class EuchreUIActivity extends Activity {
 	private Delegate delegate;
 	private String partner;
 	private ArrayList<ImageView> clickable;
+	private ImageView clicked;
+	private Hashtable<String, ImageView> imageByName;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_euchre_ui);
 		clickable = new ArrayList<ImageView>();
+		clicked = null;
 		delegate = YourDealApplication.delegate;
 		euchre = YourDealApplication.game;
 		localPlayer = YourDealApplication.local;
@@ -42,6 +58,7 @@ public class EuchreUIActivity extends Activity {
 			partnerText.setText("Partner: " + partner);
 		}
 		
+		//Draw the players current hand
 		for (int i = 0; i < hand.length; i++) {
 			if (hand[i] != null) {
 				ImageView toDraw = null;
@@ -67,7 +84,29 @@ public class EuchreUIActivity extends Activity {
 						break;
 				}
 				toDraw.setImageResource(resID);
+				imageByName.put(hand[i], toDraw);
 			}
+		}
+		for (int i = hand.length; i < 5; i++) {
+			ImageView toDisable = null;
+			switch (i) {
+				case 0:
+					toDisable = (ImageView)findViewById(R.id.hand1);
+					break;
+				case 1:
+					toDisable = (ImageView)findViewById(R.id.hand2);
+					break;
+				case 2:
+					toDisable = (ImageView)findViewById(R.id.hand3);
+					break;
+				case 3:
+					toDisable = (ImageView)findViewById(R.id.hand4);
+					break;
+				case 4:
+					toDisable = (ImageView)findViewById(R.id.hand5);
+					break;	
+			}
+			if (toDisable != null) toDisable.setVisibility(View.INVISIBLE);
 		}
 		
 		//Draw the current trump
@@ -137,6 +176,20 @@ public class EuchreUIActivity extends Activity {
 			if (toDisable != null) toDisable.setVisibility(View.INVISIBLE);
 		}
 		
+		//Draw the topCard if applicable
+		String topCard = UIProps.get("topCard").toString();
+		ImageView img = (ImageView)findViewById(R.id.topCard);
+		if (topCard != null) {
+			if (topCard.charAt(0) == '9') topCard.replace('9', 'n');
+			topCard = topCard.toLowerCase(); //because android naming rules
+			int resID = getResources().getIdentifier(topCard, "drawable", "com.example.digitalDeck");
+			img.setImageResource(resID);
+			img.setVisibility(View.VISIBLE);
+			imageByName.put(topCard, img);
+		} else {
+			img.setVisibility(View.INVISIBLE);
+		}
+		
 		//Draw trickCount information
 		int[] trickCount = (int[])UIProps.get("tricksTaken");
 		TextView tricksWon = (TextView)findViewById(R.id.tricksWon);
@@ -155,17 +208,40 @@ public class EuchreUIActivity extends Activity {
 	public void queryUser(Hashtable<String, Object> info) {
 		String key = info.get("action").toString();
 		if (key == null) return;
+		clickable = new ArrayList<ImageView>();
 		if (key.equals("turn")) {
-			//TODO create alertDialog on whether or not to pass
-		} else if (key.equals("drop")) {
+			String card = euchre.getUIInfo(localPlayer.get("name").toString()).get("topCard").toString();
+			String[] options = {"Pick it up", "Pass"};
+			String message = getSuit(card) + "was turned up";
+			drawBooleanDialog(options, message, "Your Turn");
+		} else if (key.equals("drop") || key.equals("play")) {
 			String[] plays = (String[])info.get(key);
-			String[] hand = (String[])localPlayer.get("hand");
+			for (int i = 0; i < plays.length; i++) {
+				ImageView canClick = imageByName.get(plays[i]);
+				if (canClick != null) clickable.add(canClick);
+			}
 		} else if (key.equals("lone")) {
-			
+			String[] options = {"Yes", "No"};
+			drawBooleanDialog(options, "Go alone?", "");
 		} else if (key.equals("call")) {
-			
-		} else if (key.equals("play")) {
-			
+			AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+            dialogBuilder.setMessage("Select Game Type");
+            dialogBuilder.setTitle("Game Settings");
+			String[] options = (String[])info.get(key);
+			RadioGroup group = new RadioGroup(this);
+			for (int i = 0; i < options.length; i++) {
+				RadioButton button = new RadioButton(this);
+				button.setText(options[i]);
+				group.addView(button);
+			}
+			LinearLayout layout = new LinearLayout(this);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            group.setLayoutParams(params);
+            layout.addView(group);
+            dialogBuilder.setView(layout);
+            dialogBuilder.show();
+            //TODO actually do something with the response
 		}
 	}
 	
@@ -174,9 +250,61 @@ public class EuchreUIActivity extends Activity {
 		ImageView image = (ImageView)clicked;
 		if (clickable.contains(image)) {
 			//TODO write valid click code
-			clickable = new ArrayList<ImageView>();
+			if (clicked == null) {
+				
+			} else if (image.equals(clicked)) {
+				
+			}
 		} else {
 			//TODO write invalid click code
 		}
+	}
+	
+	public void drawBooleanDialog(String[] options, String message, String title) {
+		AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+        dialogBuilder.setMessage(message);
+        dialogBuilder.setTitle(title);
+        dialogBuilder.setPositiveButton(options[0], new DialogInterface.OnClickListener() {
+        	@Override
+			public void onClick(DialogInterface dialog, int item) {
+        		JSONObject response = new JSONObject();
+        		try {
+        			response.put("action", "response");
+        			response.put("response", "call");
+        			euchre.processInfo(response);
+        		} catch (JSONException e) {
+        			e.printStackTrace();
+        		}
+        	}
+        });
+        dialogBuilder.setNegativeButton(options[1], new DialogInterface.OnClickListener() {
+        	@Override
+			public void onClick(DialogInterface dialog, int item) {
+        		JSONObject response = new JSONObject();
+        		try {
+        			response.put("action", "response");
+        			response.put("response", "pass");
+        			euchre.processInfo(response);
+        		} catch (JSONException e) {
+        			e.printStackTrace();
+        		}
+        	}
+        });
+        dialogBuilder.show();
+	}
+	
+	public String getSuit(String card) {
+		char suitChar = card.charAt(1);
+		switch (suitChar) {
+			case 'S':
+				return "Spades";
+			case 'C':
+				return "Clubs";
+			case 'H':
+				return "Hearts";
+			case 'D':
+				return "Diamonds";
+		}
+		return "";
 	}
 }
