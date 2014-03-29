@@ -58,9 +58,10 @@ public class FindGameActivity extends Activity implements OnClickListener {
         
         new Thread() {
             public void run() {
-                try {
-                    jmdns = JmDNS.create();
-                    jmdns.addServiceListener("_DigitalDeck._tcp.local.", new listener());
+            	try {
+                	jmdns = JmDNS.create();
+                    addServices(jmdns.list("_DigitalDeck._tcp.local."));
+                    jmdns.addServiceListener("_DigitalDeck._tcp.local.", new FindGameListener());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -69,7 +70,9 @@ public class FindGameActivity extends Activity implements OnClickListener {
 
         setTitle(title);
         drawGames();
-	} /** * Set up the {@link android.app.ActionBar}.  */
+	}
+	
+	/** * Set up the {@link android.app.ActionBar}.  */
 	private void setupActionBar() {
 
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -219,7 +222,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
         startActivity(toPreviewLobby);
     }
     
-    private class listener implements ServiceListener {
+    private class FindGameListener implements ServiceListener {
         /*Delegation methods
          * They do magic JmDNS stuff
          * I'll talk more about these later
@@ -250,7 +253,18 @@ public class FindGameActivity extends Activity implements OnClickListener {
         public void serviceResolved(ServiceEvent event) {
             //TODO create list item
             ServiceInfo info = event.getInfo();
-            String title = info.getName();
+            addService(info);
+        }
+    }
+    
+    private void addService(ServiceInfo info) {
+    	ServiceInfo[] infos = { info };
+    	this.addServices(infos);
+    }
+    
+    private void addServices(ServiceInfo[] someInfos) {
+    	for (ServiceInfo info : someInfos) {
+    		String title = info.getName();
             String gameType = info.getPropertyString("gameType");
             String playerCount = info.getPropertyString("playerCount");
             java.net.InetAddress[] adr = info.getInetAddresses();
@@ -259,14 +273,15 @@ public class FindGameActivity extends Activity implements OnClickListener {
             	ips[i] = adr[i].toString();
             }
             String port = Integer.toString(info.getPort());
-            Service game = new Service(title, gameType, Integer.parseInt(playerCount), ips, port);
             int players = Integer.parseInt(playerCount);
+            Service game = new Service(title, gameType, Integer.parseInt(playerCount), ips, port);
             games.add(game);
-            runOnUiThread(new Runnable() {
-                public void run() {
-                    drawGames();
-                }
-            });
-        }
+    	}
+    	
+        runOnUiThread(new Runnable() {
+            public void run() {
+                drawGames();
+            }
+        });
     }
 }
