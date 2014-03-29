@@ -86,7 +86,7 @@ public class Server implements Delegate{
             JSONObject JSON = new JSONObject(table);
 
             if (obj instanceof RemotePlayer) { //If the key is a remoteplayer forward it to the correct client
-                /*try {
+                try {
                     JSON.put("target", "player");
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -100,7 +100,7 @@ public class Server implements Delegate{
                     out.println(JSON.toString());
                 } catch(IOException e) {
                     e.printStackTrace();
-                }*/
+                }
             } else if (obj instanceof Player) { //If the key is for the local player call Player.updateProperties with the JSON
                 Player player = (Player)obj;
                 System.out.println("updating local player properties");

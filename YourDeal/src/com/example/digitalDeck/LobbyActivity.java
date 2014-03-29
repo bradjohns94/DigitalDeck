@@ -103,7 +103,9 @@ public class LobbyActivity extends Activity {
             props.put("playerCount", Integer.toString(numPlayers));
             props.put("hostUser", hostName);
             new Thread(){ public void run() { try{
-                jmdns = JmDNS.create("GlaDOS");
+            	System.out.println("Calling create()");
+                jmdns = JmDNS.create();
+                System.out.println("Calling createService()");
                 createService(props);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -124,9 +126,11 @@ public class LobbyActivity extends Activity {
         	System.out.println("Trying to connect");
         	while (outputs.size() == 0) {
         		for (int i = 0; i < ips.length; i++) {
+        			if (outputs.size() != 0) break;
         			System.out.println("Trying to connect to ip " + ips[i]);
         			new Thread(new ClientThread(hostName, ips[i].substring(1, ips[i].length()), Integer.parseInt(port))).start();
         		}
+        		if (outputs.size() != 0) break;
         	}
         	//Send the player information to the server over JSON
         	Hashtable<String, String> table = new Hashtable<String, String>();
@@ -150,6 +154,7 @@ public class LobbyActivity extends Activity {
 	 * starts a JmDNS service so that other users can detect the lobby
 	 */
     public void createService(HashMap<String, String> props) throws IOException {
+    	System.out.println("Starting jmdns broadcast");
     	gameTitle = getIntent().getStringExtra("title");
     	System.out.println("Advertising service with name " + gameTitle);
         android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)getSystemService(android.content.Context.WIFI_SERVICE);
@@ -157,6 +162,7 @@ public class LobbyActivity extends Activity {
         lock.setReferenceCounted(true);
         lock.acquire();
         info = ServiceInfo.create("_DigitalDeck._tcp.local.", gameTitle, 36241, 0, 0, props);
+        System.out.println("Info variable set");
         jmdns.registerService(info);
     }
     
@@ -340,14 +346,13 @@ public class LobbyActivity extends Activity {
 				try {
 					if (inputs.size() < 4) socket = inputs.get(inputs.size() - 1).accept();
 					
-					if (socket != null) {
+					if (socket != null && !outputs.contains(socket)) {
 						socket.setKeepAlive(true);
 						outputs.add(socket);
 						System.out.println("Connection established!");
+						CommunicationThread commThread = new CommunicationThread(socket, inputs.get(inputs.size() - 1));
+						new Thread(commThread).start();
 					}
-
-					CommunicationThread commThread = new CommunicationThread(socket, inputs.get(inputs.size() - 1));
-					new Thread(commThread).start();
 
 				} catch (IOException e) {
 					e.printStackTrace();

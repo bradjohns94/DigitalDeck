@@ -67,6 +67,7 @@ public class EuchreGame extends Game{
         YourDealApplication.delegate.updateProperties(updates);
         state = 1;
         playerTurn = dealer + 1;
+        if (playerTurn > 3) playerTurn -= 4;
         trump = -1;
         Hashtable<String, Object> gameUpdate = new Hashtable<String, Object>();
         gameUpdate.put("target", "game");
