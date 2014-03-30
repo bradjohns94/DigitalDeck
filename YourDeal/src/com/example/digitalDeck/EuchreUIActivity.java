@@ -13,6 +13,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.widget.*;
+import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.view.*;
 
 /**EuchreUIActivity
@@ -30,7 +31,12 @@ public class EuchreUIActivity extends Activity {
 	private ArrayList<ImageView> clickable;
 	private ImageView clicked;
 	private Hashtable<String, ImageView> imageByName;
+	private Hashtable<ImageView, String> nameByImage;
 
+	/**onCreate
+	 * @param savedInstance used by eclipse when creating the activity
+	 * initializes the memeber variables of the class and starts the game
+	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -43,6 +49,16 @@ public class EuchreUIActivity extends Activity {
 		euchre.start();
 	}
 	
+	/**updateUI
+	 * Analyzes all components for the UI to display from the getUIInfo class of the game object
+	 * then draws them to the screen. Displays include the following:
+	 * 1. The players current hand, setting cards that are currently there visible while turning all other views for the hand off
+	 * 2. The current trump if applicable, if no trump has been chosen for the round yet the trump image is set as invisible
+	 * 3. The current trick from the perspective of the local player showing the next player in the array as to their left
+	 * 4. The top card of the deal if applicable, if not the card is set as invisible
+	 * 5. TrickCount information, show how many tricks the local players team has won and lost
+	 * 6. Score show the current score for both teams in the game
+	 */
 	public void updateUI() {
 		System.out.println("Updating UI");
 		String[] hand = (String[])localPlayer.get("hand");
@@ -82,8 +98,14 @@ public class EuchreUIActivity extends Activity {
 						toDraw = (ImageView)findViewById(R.id.hand5);
 						break;
 				}
+				if (toDraw.equals(clicked)) {
+					toDraw.setPadding(0, 0, 0, 5);
+				} else {
+					toDraw.setPadding(0, 0, 0, 0);
+				}
 				toDraw.setImageResource(resID);
 				imageByName.put(hand[i], toDraw);
+				nameByImage.put(toDraw, hand[i]);
 			}
 		}
 		for (int i = hand.length; i < 5; i++) {
@@ -185,6 +207,7 @@ public class EuchreUIActivity extends Activity {
 			img.setImageResource(resID);
 			img.setVisibility(View.VISIBLE);
 			imageByName.put(topCard, img);
+			nameByImage.put(img, topCard);
 		} else {
 			img.setVisibility(View.INVISIBLE);
 		}
@@ -201,38 +224,88 @@ public class EuchreUIActivity extends Activity {
 		TextView scoreFor = (TextView)findViewById(R.id.yourScore);
 		TextView scoreAgainst = (TextView)findViewById(R.id.opponentScore);
 		scoreFor.setText("Your Score: " + Integer.toString(scores[teamIndex]));
-		scoreAgainst.setText("Opponent Score: " + Integer.toString(scores[(index + 1) % 2]));		
+		scoreAgainst.setText("Opponent Score: " + Integer.toString(scores[(index + 1) % 2]));
+		
+		TextView message = (TextView)findViewById(R.id.message);
+		message.setVisibility(View.INVISIBLE);
 	}
 	
+	/**queryUser
+	 * @param info a hashtable of information used to query the user
+	 * Decides based on the information type received from the "action" key of the passed
+	 * hash table what type of message to display of 4 different types
+	 * 1. Ask the player whether they want to set the suit of the top card as trump
+	 * 2. Ask the player to play or put down a card from their hand
+	 * 3. Prompt the player to whether or not they would like to go alone
+	 * 4. Prompt the user on to whether or not they would like to decide trump
+	 */
 	public void queryUser(Hashtable<String, Object> info) {
 		String key = info.get("action").toString();
+		TextView displayMessage = (TextView)findViewById(R.id.message);
 		if (key == null) return;
 		clickable = new ArrayList<ImageView>();
-		if (key.equals("turn")) {
+		if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
 			String card = euchre.getUIInfo(localPlayer.get("name").toString()).get("topCard").toString();
 			String[] options = {"Pick it up", "Pass"};
 			String message = getSuit(card) + "was turned up";
 			drawBooleanDialog(options, message, "Your Turn");
-		} else if (key.equals("drop") || key.equals("play")) {
+		} else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
+			String message = "";
+			if (key.equals("drop")) {
+				message = "Select a Card to Put Down";
+			} else {
+				message = "Select a Card to Play";
+			}
+			displayMessage.setText(message);
+			displayMessage.setVisibility(View.VISIBLE);
 			String[] plays = (String[])info.get(key);
 			for (int i = 0; i < plays.length; i++) {
 				ImageView canClick = imageByName.get(plays[i]);
 				if (canClick != null) clickable.add(canClick);
 			}
-		} else if (key.equals("lone")) {
+		} else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
 			String[] options = {"Yes", "No"};
 			drawBooleanDialog(options, "Go alone?", "");
-		} else if (key.equals("call")) {
+		} else if (key.equals("call")) { //Prompt the user to choose trump from the list provided or to pass
 			AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
             dialogBuilder.setMessage("Select Game Type");
             dialogBuilder.setTitle("Game Settings");
 			String[] options = (String[])info.get(key);
 			RadioGroup group = new RadioGroup(this);
 			for (int i = 0; i < options.length; i++) {
+				if (options[i].equals("pass")) continue;
 				RadioButton button = new RadioButton(this);
 				button.setText(options[i]);
 				group.addView(button);
 			}
+			final RadioHandler handler = new RadioHandler();
+			group.setOnCheckedChangeListener(handler);
+			dialogBuilder.setPositiveButton("Select", new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					try {
+						JSONObject response = new JSONObject();
+						response.put("action", "response");
+						response.put("response", handler.getSelected());
+						euchre.process(response);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+			}); //TODO make this forward the selected
+			dialogBuilder.setNegativeButton("Pass", new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					try {
+						JSONObject response = new JSONObject();
+						response.put("action", "response");
+						response.put("response", "pass");
+						euchre.process(response);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+			});
 			LinearLayout layout = new LinearLayout(this);
             layout.setOrientation(LinearLayout.VERTICAL);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -240,25 +313,48 @@ public class EuchreUIActivity extends Activity {
             layout.addView(group);
             dialogBuilder.setView(layout);
             dialogBuilder.show();
-            //TODO actually do something with the response
 		}
 	}
 	
-	public void processInput(View clicked) {
-		if (!(clicked instanceof ImageView)) return;
-		ImageView image = (ImageView)clicked;
+	/**processInput
+	 * @param pressed the view of the clicked object
+	 * checks whether the pressed card is of valid use to the game object at the current moment,
+	 * if it is the method checks the card with the last clicked object, if they match it plays the
+	 * card, otherwise it marks it as the last clicked object for the gameUI to display. If the play
+	 * is invalid this method should inform the user of such.
+	 */
+	public void processInput(View pressed) {
+		if (!(pressed instanceof ImageView)) return;
+		ImageView image = (ImageView)pressed;
 		if (clickable.contains(image)) {
-			//TODO write valid click code
-			if (clicked == null) {
-				
-			} else if (image.equals(clicked)) {
-				
+			if (clicked == null || !image.equals(clicked)) { //If the card has not recieved its first click
+				clicked = image;
+				image.setPadding(0, 0, 0, 5);
+			} else { //Second click for confirmation
+				clicked = null;
+				clickable = new ArrayList<ImageView>();
+				String play = nameByImage.get(image);
+				try {
+					JSONObject response = new JSONObject();
+					response.put("action", "response");
+					response.put("response", play);
+					euchre.process(response);
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
 			}
 		} else {
 			//TODO write invalid click code
 		}
 	}
 	
+	/**drawBooleanDialog
+	 * @param options the options to give the dialog
+	 * @param message the message for the dialog to display
+	 * @param title the title of the dialog
+	 * Prompts the user with a yes/no dialog based on the information
+	 * provided
+	 */
 	public void drawBooleanDialog(String[] options, String message, String title) {
 		AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
         dialogBuilder.setMessage(message);
@@ -270,7 +366,7 @@ public class EuchreUIActivity extends Activity {
         		try {
         			response.put("action", "response");
         			response.put("response", "call");
-        			euchre.processInfo(response);
+        			euchre.process(response);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -283,7 +379,7 @@ public class EuchreUIActivity extends Activity {
         		try {
         			response.put("action", "response");
         			response.put("response", "pass");
-        			euchre.processInfo(response);
+        			euchre.process(response);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -292,6 +388,11 @@ public class EuchreUIActivity extends Activity {
         dialogBuilder.show();
 	}
 	
+	/**getSuit
+	 * @param card the card to get the suit of
+	 * @return the suit of the passed card
+	 * get the suit of the card passed by the user
+	 */
 	public String getSuit(String card) {
 		char suitChar = card.charAt(1);
 		switch (suitChar) {
@@ -305,5 +406,43 @@ public class EuchreUIActivity extends Activity {
 				return "Diamonds";
 		}
 		return "";
+	}
+	
+	/**RadioHandler
+	 * @author Bradley Johns
+	 * handles the onCheckedChanged of an alertDialog and updates
+	 * a String representing the currently chosen option, this
+	 * option can then be accessed by the rest of the program by
+	 * the getSelected() method
+	 */
+	private class RadioHandler implements OnCheckedChangeListener {
+		
+		private String selected;
+		
+		/**RadioHandler constructor
+		 * initializes the selected variable to pass if the user never
+		 * presses a button
+		 */
+		public RadioHandler() {
+			selected = "pass";
+		}
+		
+		/**onCheckedChanged
+		 * @param group the group that had its checked option changed
+		 * @param id the id of the changed object
+		 * changes the selected string to that of the selected radioButton
+		 */
+		public void onCheckedChanged(RadioGroup group, int id) {
+			RadioButton checked = (RadioButton)findViewById(id);
+			selected = checked.getText().toString();
+		}
+		
+		/**getSelected
+		 * @return the string of the selected radioButton
+		 * gives the rest of the program access to the selected radioButton
+		 */
+		public String getSelected() {
+			return selected;
+		}
 	}
 }
