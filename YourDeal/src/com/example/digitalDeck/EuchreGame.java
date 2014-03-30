@@ -579,6 +579,6 @@ public class EuchreGame extends Game{
     }
     
     public void processInfo(JSONObject info) {
-    	
+    	process(info);
     }
 }

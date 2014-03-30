@@ -1,0 +1,16 @@
+DIGITAL DECK EUCHRE PROCESS CHAIN
+Note: This assumes trump is called first round for this example, but function in all known situations
+
+Server.start() -> process(State0)
+process(State0) -> startRound() -> Server.updateGame() -> process(State1)
+process(State1) -> requestSignal() -> Player.updateProperties()/RemotePlayer.updateProperties() -> user response -> process(State2)
+process(State2) -> processCall1() -> process(State3)
+process(State3) -> requestSignal() -> player.updateProperties()/RemotePlayer.updateProperties() -> user response -> process(State4)
+process(State4) -> processDropCard -> process(State5)
+process(State5) -> requestSignal() -> player.updateProperties()/RemotePlayer.updateProperties() -> user response -> process(State6)
+process(State6) -> processLoner() -> process(State 9)
+process(State9) -> requestSignal() -> player.updateProperties()/RemotePlayer.updateProperties() -> user response -> process(State10)
+process(State10) -> processPlay() -> updateGame() -> process(State11)
+process(State11) -> processTrick() -> updateGame() -> process(State12)
+process(State12) -> processDeal() -> updateGame() -> process(State13)
+State 13 is a dead state that doesn't actually exist so nothing happens
