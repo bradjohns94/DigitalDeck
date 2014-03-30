@@ -8,14 +8,16 @@ package com.example.digitalDeck;
  * devices
  */
 
-import java.util.*;
+import java.net.Socket;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class RemotePlayer extends Player{
+public class RemotePlayer extends Player {
+    private NetworkingDelegate delegate;
 
-    private Server sender;
-
-    public RemotePlayer(String name) {
-        super(name);
+    public RemotePlayer(String aName, NetworkingDelegate aDelegate) {
+        super(aName);
+        delegate = aDelegate;
     }
     
     /**updateProperties
@@ -24,11 +26,9 @@ public class RemotePlayer extends Player{
      * the server to inform the client on the foreign device
      */
     @Override
-    public void updateProperties(Hashtable<String, Object> update) {
+    public void updateProperties(JSONObject update) {
         super.updateProperties(update);
-        Hashtable<Object, Hashtable<String, Object>> udate = new Hashtable<Object, Hashtable<String, Object>>();
-        udate.put(this, update);
-        sender.updateProperties(udate);
+        delegate.updatedPlayer(this, update);
     }
 
     /**put
@@ -38,18 +38,21 @@ public class RemotePlayer extends Player{
     @Override
     public void put(String key, Object value) {
         super.put(key, value);
-        Hashtable<String, Object> newDict = new Hashtable<String, Object>();
-        newDict.put(key, value);
-        Hashtable<Object, Hashtable<String, Object>> update = new Hashtable<Object, Hashtable<String, Object>>();
-        update.put(this, newDict);
-        sender.updateProperties(update);
+        JSONObject update = new JSONObject();
+        try {
+			update.put(key, value);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+        
+        delegate.updatedPlayer(this, update);
     }
 
     /**setDelegate
      * sets the delegate that the remotePlayer object
      * must forward updates to
      */
-    public void setDelegate(Server server) {
-        sender = server;
+    public void setDelegate(NetworkingDelegate aDelegate) {
+        delegate = aDelegate;
     }
 }

@@ -1,52 +1,67 @@
 package com.example.digitalDeck;
 
-import java.util.*;
-import java.net.Socket;
-import java.net.ServerSocket;
-import java.io.*;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class Client {
+public class Client implements NetworkingDelegate, StreamDelegate {
+	private RemoteGame game;
+	private Stream stream;
+	
+	public Client(RemoteGame aRemoteGame, Service aService) {
+		game = aRemoteGame;
+		
+		//Start a connection to the server
+        stream = new Stream(aService);
+        stream.setDelegate(this);
+	}
+	
+	public RemoteGame getGame() {
+		return game;
+	}
 
-    private Socket serverOut;
-    private ServerSocket serverIn;
-    private Player player;
-    //private RemoteGame game;
+	@Override
+	public boolean isHostingGame() {
+		return false;
+	}
 
-    public Client(ServerSocket in, Socket out) {
-        serverOut = out;
-        serverIn = in;
-    }
-    
-    public void start(EuchreUIActivity euchre) {
-    	//TODO make this
-    }
-
-    public void updateProperties() {
-        CommunicationThread commThread = new CommunicationThread();
-    }
-
-    class CommunicationThread implements Runnable {
-        private BufferedReader input;
-        
-        public CommunicationThread() {
-            try {
-                input = new BufferedReader(new InputStreamReader(serverOut.getInputStream()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    @Override
+    public void addedPlayer(Player aPlayer) {
+        try {
+            JSONObject data = new JSONObject();
+            data.put("addPlayer", aPlayer.get("name"));
+            stream.queueWrite(data);
         }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
 
-        public void run() {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    String JSON = input.readLine();
-                    if (JSON != null) break;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            //TODO interperate JSON
-            //TODO send updates to remote game
+    @Override
+    public void removedPlayer(Player aPlayer) {
+        try {
+            JSONObject data = new JSONObject();
+            data.put("removePlayer", aPlayer.get("name"));
+            stream.queueWrite(data);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void updatedPlayer(RemotePlayer aPlayer, JSONObject updates) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void updatedGame(JSONObject updates) { // This is sort of a lie on the Client end. Oh well.
+        stream.queueWrite(updates);
+    }
+
+    @Override
+    public void streamReceivedData(Stream aStream, JSONObject data) {
+        if (!aStream.equals(stream)) {
+            System.out.println("what the heck");
         }
     }
 }

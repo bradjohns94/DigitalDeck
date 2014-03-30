@@ -21,6 +21,7 @@ import android.widget.*;
 import android.graphics.Color;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.util.ArrayList;
 
 import javax.jmdns.*;
@@ -175,7 +176,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
             row.addView(title);
 
             //Text view for the current number of players
-            String statusText = games.get(i).getPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
+            String statusText = games.get(i).getNumPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
             TextView status = new TextView(this);
             status.setText(statusText);
             status.setTextAppearance(this, android.R.style.TextAppearance_Large);
@@ -212,7 +213,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
         Service serv = games.get(index);
         toPreviewLobby.putExtra("title", serv.getTitle());
         toPreviewLobby.putExtra("type", serv.getType());
-        toPreviewLobby.putExtra("numPlayers", Integer.toString(serv.getPlayers()));
+        toPreviewLobby.putExtra("numPlayers", Integer.toString(serv.getNumPlayers()));
         toPreviewLobby.putExtra("port", serv.getPort());
         toPreviewLobby.putExtra("caller", "PreviewLobbyActivity");
         Bundle ips = new Bundle();
@@ -266,15 +267,11 @@ public class FindGameActivity extends Activity implements OnClickListener {
     	for (ServiceInfo info : someInfos) {
     		String title = info.getName();
             String gameType = info.getPropertyString("gameType");
-            String playerCount = info.getPropertyString("playerCount");
-            java.net.InetAddress[] adr = info.getInetAddresses();
-            String[] ips = new String[adr.length];
-            for (int i = 0; i < adr.length; i++) {
-            	ips[i] = adr[i].toString();
-            }
-            String port = Integer.toString(info.getPort());
-            int players = Integer.parseInt(playerCount);
-            Service game = new Service(title, gameType, Integer.parseInt(playerCount), ips, port);
+            int playerCount = Integer.parseInt(info.getPropertyString("playerCount"));
+            Inet4Address[] addresses = info.getInet4Addresses();
+            int port = info.getPort();
+            
+            Service game = new Service(title, gameType, playerCount, addresses, port);
             games.add(game);
     	}
     	

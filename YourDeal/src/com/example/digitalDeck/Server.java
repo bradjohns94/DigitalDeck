@@ -10,22 +10,27 @@ package com.example.digitalDeck;
  */
 
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.net.Socket;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.io.*;
+
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
 
 import org.json.*;
 
-import android.app.Application;
-
-public class Server implements Delegate{
-
-    private Hashtable<RemotePlayer, Socket> sockets;
-    private Hashtable<RemotePlayer, ServerSocket> serverSockets;
+public class Server implements NetworkingDelegate, StreamDelegate {
+    private HashMap<RemotePlayer, Stream> streamsByPlayer;
+    private ServerListener serverListener;
+    private Thread serverThread;
     private Game game;
-    private Socket listening;
-    private EuchreUIActivity UI;
+    
+    private android.net.wifi.WifiManager.MulticastLock lock;
+    private JmDNS jmdns;
+    private ServiceInfo broadcastService;
 	
     /**Server constructor
      * @param newGame the game that the server is hosting
@@ -34,79 +39,98 @@ public class Server implements Delegate{
      * object to the game that will be played
      */
     public Server(Game newGame) {
-        sockets = new Hashtable<RemotePlayer, Socket>();
-        serverSockets = new Hashtable<RemotePlayer, ServerSocket>();
+        streamsByPlayer = new HashMap<RemotePlayer, Stream>();
+        serverListener = new ServerListener(0);
         game = newGame;
     }
     
-    public void start(EuchreUIActivity euchre) {
-    	UI = euchre;
-    	Player[] players = game.getPlayers();
-    	for (int i = 0; i < players.length; i++) {
-    		if (players[i] == null) break; //This shouldn't happen, but just in case
-    		if (players[i] instanceof RemotePlayer) {
-    			RemotePlayer remote = (RemotePlayer)players[i];
-    			//new Thread(new CommunicationThread(sockets.get(remote))).start();
-    		}
-    	}
-    	JSONObject empty = new JSONObject();
-    	game.setUI(euchre);
-    	game.process(empty);
+    public void start() {
+    	serverThread = new Thread(serverListener);
+    	serverThread.start();
+    	this.createService();
+    }
+    
+    public void stop() {
+        serverListener.stop();
+    }
+    
+    /**createService
+	 * @param props the dictionary of properties to be broadcast
+	 * @throws IOException
+	 * Starts a JmDNS service so that other users can detect the lobby
+	 */
+    public void createService() {
+        HashMap<String, String> props = new HashMap<String, String>();
+        props.put("gameType", game.getType());
+        props.put("gameSize", Integer.toString(game.getGameSize()));
+        props.put("playerCount", Integer.toString(game.getNumPlayers()));
+        props.put("hostUser", game.getHost());
+        
+        if (lock == null) {
+        	android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
+        	lock = wifi.createMulticastLock("DefinitelyCats");
+        	lock.setReferenceCounted(true);
+        }
+        lock.acquire(); // Lock multicast open
+        
+        if (broadcastService == null) {
+        	broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", game.getTitle(), serverListener.getPort(), 0, 0, props);
+        }
+        
+        try {
+            jmdns.registerService(broadcastService); // Broadcast!
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void stopBroadcasting() {
+    	jmdns.unregisterService(broadcastService);
+    	lock.release();
     }
 
-    /**addPlayer
-     * @param name
-     * @param connection
-     * @return whether the add was successful
-     * Assuming there is room left in the game, the method adds
-     * them to the dictionary of player/socket values and returns
-     * whether or not they were added successfully.
-     */
-    public boolean addPlayer(String name, Socket sock, ServerSocket serv) {
-        if (game.isFull()) return false;
-        RemotePlayer newPlayer = new RemotePlayer(name);
-        newPlayer.setDelegate(this);
-        sockets.put(newPlayer, sock);
-        serverSockets.put(newPlayer, serv);
-        game.addPlayer(name);
-        return true;
+    public void addedPlayer(Player aPlayer) {
+        JSONObject updates = new JSONObject();
+        try {
+            updates.put("target", "game");
+            updates.put("addedPlayer", aPlayer.get("name"));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        
+        for (Stream stream : streamsByPlayer.values()) {
+            stream.queueWrite(updates);
+        }
+    }
+    
+    public void removedPlayer(Player aPlayer) {
+        JSONObject updates = new JSONObject();
+        try {
+            updates.put("target", "game");
+            updates.put("removedPlayer", aPlayer.get("name"));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        
+        for (Stream stream : streamsByPlayer.values()) {
+            stream.queueWrite(updates);
+        }
     }
 
     /**updateProperties
      * @param updates a dictionary of player object or remote player object keys to an update dictionary value
-     * iterates through each player who needs to recieve updates and forwards their information in the form of
+     * iterates through each player who needs to receive updates and forwards their information in the form of
      * a JSON dictionary
      */
-    public void updateProperties(Hashtable<Object, Hashtable<String, Object>> updates) {
-        Enumeration<Object> keys = updates.keys();
-        System.out.println("Updating properties");
-        while (keys.hasMoreElements()) {
-            Object obj = keys.nextElement();
-            Hashtable<String, Object> table = updates.get(obj);
-            JSONObject JSON = new JSONObject(table);
-
-            if (obj instanceof RemotePlayer) { //If the key is a remoteplayer forward it to the correct client
-                try {
-                    JSON.put("target", "player");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                RemotePlayer player = (RemotePlayer)obj;
-                Socket connection = sockets.get(player);
-                try {
-                    PrintWriter out = new PrintWriter(new BufferedWriter(
-                            new OutputStreamWriter(connection.getOutputStream())),
-                            true);
-                    out.println(JSON.toString());
-                } catch(IOException e) {
-                    e.printStackTrace();
-                }
-            } else if (obj instanceof Player) { //If the key is for the local player call Player.updateProperties with the JSON
-                Player player = (Player)obj;
-                System.out.println("updating local player properties");
-                player.updateProperties(table);
-            }
+    public void updatedPlayer(RemotePlayer player, JSONObject updates) {
+    	try {
+            updates.put("target", "player");
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
+    	
+    	streamsByPlayer.get(player).queueWrite(updates);
     }
 
     /**updateGame
@@ -114,84 +138,317 @@ public class Server implements Delegate{
      * Sends an update of general game information to all players currently
      * connected
      */
-    public void updateGame(Hashtable<String, Object> updates) {
-        JSONObject JSON = new JSONObject(updates);
+    public void updatedGame(JSONObject updates) {
         try {
-            JSON.put("target", "game");
+            updates.put("target", "game");
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        Enumeration<RemotePlayer> keys = sockets.keys();
-        while (keys.hasMoreElements()) {
-            Socket connection = sockets.get(keys.nextElement());
-            try {
-                PrintWriter out = new PrintWriter(new BufferedWriter(
-                        new OutputStreamWriter(connection.getOutputStream())),
-                        true);
-                out.println(JSON.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        
+        for (Stream stream : streamsByPlayer.values()) {
+            stream.queueWrite(updates);
         }
-        UI.updateUI();
         JSONObject empty = new JSONObject();
         game.process(empty);
     }
     
-    public void forwardInfo(JSONObject info) {
-    	game.process(info);
+    @Override
+	public boolean isHostingGame() {
+		return true;
+	}
+    
+    @Override
+    public Game getGame() {
+    	return game;
     }
     
-    public void listen(Socket toListen) {
-    	if (listening == null) listening = toListen;
+    public void streamReceivedData(Stream aStream, JSONObject data) {
+        try {
+            if (data.has("addPlayer")) {
+                String name = data.get("addPlayer").toString();
+                for (RemotePlayer player : streamsByPlayer.keySet()) {
+                    // TODO: Add playersByStream
+                    if (streamsByPlayer.get(player).equals(aStream)) {
+                        player.put("name", name);
+                        game.addPlayer(player);
+                        break;
+                    }
+                }
+            }
+            
+            if (data.has("removePlayer")) {
+                Player player = game.getPlayerNamed(data.getString("removePlayer"));
+                game.removePlayer(player);
+            }
+            
+            if (data.has("action")) {
+                game.process(data);
+            }
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
     
-    class CommunicationThread implements Runnable {
-		private Socket clientSocket;
+    /******************************************************************************************************************/
+    
+    private class ServerListener implements Runnable {
+    	/**ServerListener
+    	 * The thread that is created when the server starts listening
+    	 * for clients to be added. When  the listen method attached
+    	 * to the ServerSocket is resolved it forwards the information
+    	 * to a communication thread
+    	 */
+    	int port;
+    	ServerSocket serverSocket;
+    	
+    	/**ServerThread constructor
+    	 * @param serverPort the port to start a connection over
+    	 * Initializes the port variable to be used by the server
+    	 */
+    	public ServerListener(int serverPort) {
+    		try {
+                serverSocket = new ServerSocket(serverPort);
+                port = serverSocket.getLocalPort();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+    	}
+
+        public int getPort() {
+            return port;
+        }
+
+        /**run
+    	 * creates a ServerSocket object and then listens for the socket
+    	 * to be initialized, when the socket is initialized under the listen()
+    	 * method it turns on the socket's keepAlive flag and starts a new
+    	 * communication Thread and changes openInConnection to the next available connection
+    	 */
+		public void run() {
+			while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
+				try {
+					Socket newSocket = serverSocket.accept();
+					
+					newSocket.setKeepAlive(true);
+					System.out.println("Connection established!");
+					
+					streamsByPlayer.put(new RemotePlayer(null, Server.this), new Stream(newSocket));
+
+				} catch (IOException e) {
+				    System.out.println("closed serversocket");
+				}
+			}
+		}
+		
+		public void stop() {
+		    try {
+                serverSocket.close(); // Kills the blocked accept()
+                for (Stream stream : streamsByPlayer.values()) {
+                    stream.stop();
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+		}
+	}
+    
+    private class ClientStream {
+        ClientReader reader;
+        ClientWriter writer;
+        Socket socket;
+        
+        public ClientStream(Socket aSocket) {
+            socket = aSocket;
+            reader = new ClientReader(aSocket);
+            writer = new ClientWriter(aSocket);
+            new Thread(reader).start();
+            new Thread(writer).start();
+        }
+        
+        public void queueWrite(JSONObject data) {
+            writer.queueWrite(data);
+        }
+        
+        public ClientReader getReader() {
+            return reader;
+        }
+        
+        public ClientWriter getWriter() {
+            return writer;
+        }
+        
+        public void stop() {
+            try {
+                writer.stop();
+                reader.stop();
+                if (!socket.isClosed()) {
+                    socket.close();
+                }
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private class ClientReader implements Runnable {
+		/**CommuncationThread
+		 * Reads from input over the specified socket and if it receives
+		 * new information sends it to the UpdateUIThread
+		 */
+		private Socket socket;
 		private DataInputStream input;
 
 		/**CommunicationThread constructor
 		 * @param clientSocket the socket the communication takes place over
 		 * Initializes the variables to be used in the run() method of the thread
 		 */
-		public CommunicationThread(Socket clientSocket) {
-			this.clientSocket = clientSocket;
+		public ClientReader(Socket clientSocket) {
+			socket = clientSocket;
 			try {
-				this.input = new DataInputStream(this.clientSocket.getInputStream());
+				input = new DataInputStream(this.socket.getInputStream());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
+		/**run
+		 * Continuously reads from the input buffer of the socket and if the input changes
+		 * forwards the information to the updateUIThread
+		 */
 		public void run() {
-			while (!Thread.currentThread().isInterrupted()) {
+			while (!Thread.currentThread().isInterrupted() && !socket.isClosed()) {
 				try {
 					ByteBuffer buf = ByteBuffer.allocate(9);
 					input.readFully(buf.array(), 0, 9);
-					int charlie = buf.getInt(0); //Charlie is my magic buddy
-					if (charlie != 0x444C4447) { //Check "DGLD" notifier
-						System.out.println("What was that, charlie? " + charlie);
+					
+					int magic = buf.getInt(0); 
+					if (magic != 0x444c4447) {
+						System.out.println("Magic: " + magic);
 						continue;
 					}
+					
 					byte type = buf.get(4); //get the packet type
-					if (type != 0x0F) {
-						System.out.println("Charlie, you're silly");
-						System.out.println("Charlie said " + type);
+					if (type != 0x0f) {
+						System.out.println("Non-JSON packet, skipping reading payload");
 						continue;
 					}
-					int size = buf.getInt(5);
-					ByteBuffer payloadBuf = ByteBuffer.allocate(size);
-					input.readFully(payloadBuf.array(), 0, size);
-					String read = new String(payloadBuf.array());
-					JSONObject JSON = new JSONObject(read);
-					forwardInfo(JSON);
-				} catch (IOException e) {
-					e.printStackTrace();
+					
+					int payloadSize = buf.getInt(5);
+					ByteBuffer payloadBuf = ByteBuffer.allocate(payloadSize);
+					
+					// Read the payload
+					input.readFully(payloadBuf.array(), 0, payloadSize);
+					String read = new String(payloadBuf.array(), Charset.forName("UTF-8"));
+					System.out.println(read);
+/*					
+					JSONObject payload = new JSONObject(read);
+
+					if (payload.has("addPlayer")) {
+						String name = payload.get("addPlayer").toString();
+						for (RemotePlayer player : streamsByPlayer.keySet()) {
+						    if (streamsByPlayer.get(player).getReader().equals(this)) {
+						        player.put("name", name);
+						        game.addPlayer(player);
+						        break;
+						    }
+						}
+					}
+					
+					if (payload.has("removePlayer")) {
+						// TODO
+					}
+					
+					if (payload.has("action")) {
+					    game.process(payload);
+					}
+
 				} catch (JSONException e) {
 					e.printStackTrace();
+*/				} catch (IOException e) {
+				    System.out.println("reader socket closed");
 				}
 			}
 		}
-
+		
+		public void stop() {
+		    try {
+                socket.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+		}
 	}
+    
+    private static class ClientWriter implements Runnable {
+    	private Socket socket;
+    	private DataOutputStream output;
+    	private LinkedBlockingQueue<JSONObject> queue;
+    	private JSONObject DOTA;
+    	
+    	public ClientWriter(Socket aSocket) {
+    		socket = aSocket;
+    		queue = new LinkedBlockingQueue<JSONObject>();
+    		
+    		try {
+    			output = new DataOutputStream(socket.getOutputStream());
+				DOTA = new JSONObject("[\"DOTA\"]");
+			} 
+    		catch (JSONException e) {
+				System.out.println("DOTA is wrong");
+				e.printStackTrace();
+			} 
+    		catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+    	
+		@Override
+		public void run() {
+			try {
+				JSONObject payload = queue.take(); // Blocks until there is something to take
+				if (payload.equals(DOTA)) return;
+				
+				String payloadString = payload.toString();
+				
+				// Build the header:
+				ByteBuffer buf = ByteBuffer.allocate(9);
+				buf.putInt(0x444c4447);
+				buf.put((byte)0x0f);
+				buf.putInt(payloadString.length());
+				
+				// Now write them to the socket in order:
+				output.write(buf.array(), 0, 9);
+				output.writeUTF(payloadString);
+			}
+			catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			catch (IOException e) {
+				System.out.println("writer socket closed");
+			}
+		}
+		
+		public void queueWrite(JSONObject payload) {
+			try {
+				queue.put(payload);
+			}
+			catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		public void stop() {
+		    try {
+                queue.put(DOTA);
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+		}
+    }
 }

@@ -24,10 +24,8 @@ import android.view.*;
  */
 
 public class EuchreUIActivity extends Activity {
-	
 	private Player localPlayer;
 	private EuchreGame euchre;
-	private Delegate delegate;
 	private String partner;
 	private ArrayList<ImageView> clickable;
 	private ImageView clicked;
@@ -39,11 +37,10 @@ public class EuchreUIActivity extends Activity {
 		setContentView(R.layout.activity_euchre_ui);
 		clickable = new ArrayList<ImageView>();
 		clicked = null;
-		delegate = YourDealApplication.delegate;
 		euchre = YourDealApplication.game;
-		localPlayer = YourDealApplication.local;
+		localPlayer = YourDealApplication.localPlayer;
 		localPlayer.setUI(this);
-		delegate.start(this);
+		euchre.start();
 	}
 	
 	public void updateUI() {
@@ -66,6 +63,8 @@ public class EuchreUIActivity extends Activity {
 				if (fileName.charAt(0) == '9') fileName.replace('9', 'n');
 				fileName = fileName.toLowerCase(); //because android naming rules
 				int resID = getResources().getIdentifier(fileName, "drawable", "com.example.digitalDeck");
+				
+				// TODO: plz no
 				switch (i) {
 					case 0:
 						toDraw = (ImageView)findViewById(R.id.hand1);

@@ -31,13 +31,11 @@ import javax.jmdns.*;
 
 public class CreateGameActivity extends Activity implements OnClickListener, OnCheckedChangeListener {
 
-    private static final String[] gameModes = {"Euchre", "Hearts"};
+    private static final String[] gameModes = {"Euchre"};//, "Hearts"};
     private AlertDialog gameDialog;
     private String gameMode;
     private String nextGameMode;
     private TextView text;
-    android.net.wifi.WifiManager.MulticastLock lock;
-    JmDNS jmdns;
 
 
 	@Override
@@ -85,10 +83,10 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
 			//
 			NavUtils.navigateUpFromSameTask(this);
 			return true;
-        case R.id.action_settings:
-            Intent toSettings = new Intent(this, SettingsActivity.class);
-            startActivity(toSettings);
-            return true;
+		case R.id.action_settings:
+			Intent toSettings = new Intent(this, SettingsActivity.class);
+			startActivity(toSettings);
+			return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
@@ -98,32 +96,28 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         String title = titleText.getText().toString();
         //TODO customize game type by specifics
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String hostName = prefs.getString("display_name", "Unknown");
-        EuchreGame newGame = new EuchreGame(hostName, title);
-        /*final HashMap<String, String> props = new HashMap<String, String>();
-        props.put("gameType", gameMode);
-        props.put("hostUser", hostName);
-        props.put("playerCount", "1");
-        props.put("gameTitle", title);
-        new Thread(){public void run() {try {
-        	jmdns = JmDNS.create();
-			createService(props);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}}}.start();*/
+        String hostName = prefs.getString("display_name", "The Man in the Tan Jacket");
+        
+        // Create the proper type of game:
+        Game newGame = null;
+        if (gameMode.equals("Euchre")) {
+        	newGame = new EuchreGame(title);
+        }
+        
+        // Create a server:
+        Server newServer = new Server(newGame);
+        newServer.start();
+        newGame.setNetworkingDelegate(newServer);
+        
+        // Finally, create the local player and add them to the game:
+        Player newPlayer = new Player(hostName);
+        newGame.addPlayer(newPlayer);
+        
+        YourDealApplication.game = newGame;
+        YourDealApplication.networkingDelegate = newServer;
+        YourDealApplication.localPlayer = newPlayer;
 
         Intent toLobby = new Intent(this, LobbyActivity.class);
-        Bundle playerBundle = new Bundle();
-        String[] playerList = new String[newGame.getPlayers().length];
-        for (int i = 0; i < playerList.length; i++) {
-        	if (newGame.getPlayers()[i] == null) break;
-        	playerList[i] = newGame.getPlayers()[i].get("name").toString();
-        }
-        playerBundle.putStringArray(null, playerList);
-        toLobby.putExtras(playerBundle);
-        toLobby.putExtra("caller", "CreateGameActivity");
-        toLobby.putExtra("gameType", gameMode);
-        toLobby.putExtra("title", title);
         startActivity(toLobby);
     }
 
@@ -138,15 +132,6 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         text.setTextAppearance(this, android.R.style.TextAppearance_Large); 
         row.setOnClickListener(this); 
         row.addView(text);
-    }
-
-    public void createService(HashMap<String, String> props) throws IOException{
-    	android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)getSystemService(android.content.Context.WIFI_SERVICE);
-    	lock = wifi.createMulticastLock("DefinitelyCats");
-    	lock.setReferenceCounted(true);
-    	lock.acquire();
-    	ServiceInfo serviceInfo = ServiceInfo.create("_DigitalDeck._tcp.local.", props.get("gameTitle"), 36241, 0, 0, props);
-    	jmdns.registerService(serviceInfo);
     }
 
     @Override

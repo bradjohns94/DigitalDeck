@@ -9,11 +9,14 @@ package com.example.digitalDeck;
 
 import java.util.*;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class Player {
 	
 	private EuchreUIActivity UI;
 	
-	protected Hashtable<String, Object> properties;
+	protected JSONObject properties;
 
     /**Player constructor
      * @param name the name of the player
@@ -21,8 +24,12 @@ public class Player {
      * putting a value of the players name into it
      */
     public Player(String name) {
-        properties = new Hashtable<String, Object>();
-        properties.put("name", name);
+        properties = new JSONObject();
+        try {
+			properties.put("name", name);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
     }
 
     /**put
@@ -31,7 +38,11 @@ public class Player {
      * Puts the passed key, value pair into the dictionary
      */
     public void put(String key, Object value) {
-        properties.put(key, value);
+        try {
+			properties.put(key, value);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
     }
 
     /**get
@@ -40,7 +51,13 @@ public class Player {
      * gets the specified key from the dictionary and returns its value
      */
     public Object get(String key) {
-        return properties.get(key);
+        try {
+			return properties.get(key);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+        
+        return null;
     }
 
     /**updateProperties
@@ -49,7 +66,7 @@ public class Player {
      * player information in the game. Uses a helper method in order to better
      * handle recursive cases
      */
-    public void updateProperties(Hashtable<String, Object> update) {
+    public void updateProperties(JSONObject update) {
         helperUpdate(update, properties);
         UI.updateUI();
     }
@@ -61,29 +78,23 @@ public class Player {
      * if key is not in the dictionary the pair is added and if the key links
      * to another dictionary the subdictionary is updated recursively
      */
-    private void helperUpdate(Dictionary<String, Object> update, Dictionary<String, Object> old) {
-        Enumeration<String> keys = update.keys();
-        while (keys.hasMoreElements()) {
-            String key = keys.nextElement();
-            if (update.get(key) instanceof Dictionary) {
-                Object oldVal = old.get(key);
-                Dictionary<String, Object> subDict = null;
-                if (oldVal instanceof Dictionary) subDict = (Dictionary<String, Object>)oldVal;
-                if (subDict != null) {
-                    helperUpdate((Dictionary<String, Object>)update.get(key),
-                                 (Dictionary<String, Object>)old.get(key));
-                }
-            }
-            old.put(key, update.get(key));
-        }
-    }
-    
-    /**getProperties
-     * @return the properties dictionary
-     * returns the properties of the player object
-     */
-    private Hashtable<String, Object> getProperties() {
-        return properties;
+    private void helperUpdate(JSONObject update, JSONObject old) {
+    	Iterator<String> iterator = update.keys();
+    	try {
+    		while (iterator.hasNext()) {
+    			String key = iterator.next();
+    			if (update.get(key) instanceof Dictionary) {
+    				Object oldVal = old.get(key);
+    				if (oldVal instanceof JSONObject) {
+    					helperUpdate((JSONObject)update.get(key), (JSONObject)old.get(key));
+    				}
+    			}
+    			old.put(key, update.get(key));
+    		}
+    	}
+    	catch (JSONException e) {
+    		e.printStackTrace();
+    	}
     }
     
     public void setUI(EuchreUIActivity euchre) {
