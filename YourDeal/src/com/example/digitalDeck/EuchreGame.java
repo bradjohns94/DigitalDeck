@@ -561,6 +561,9 @@ public class EuchreGame extends Game{
     	props.put("scores", scores);
     	props.put("tricksTaken", tricksTaken);
     	props.put("trick", trick);
+    	if (state < 5) {
+    		props.put("topCard", topCard);
+    	}
     	if (trump != -1) {
     		props.put("trump", suits[trump]);
     	} else {
@@ -573,5 +576,9 @@ public class EuchreGame extends Game{
     	int partnerIndex = playerIndex + 2;
     	if (partnerIndex > 3) partnerIndex -= 4;
     	return players[partnerIndex].get("name").toString();
+    }
+    
+    public void processInfo(JSONObject info) {
+    	
     }
 }

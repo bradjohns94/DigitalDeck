@@ -31,6 +31,7 @@
         android:theme="@android:style/Theme.Holo.Light" >
         <activity
             android:name="com.example.digitalDeck.StartActivity"
+            android:screenOrientation="portrait"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -50,6 +51,7 @@
         <activity
             android:name="com.example.digitalDeck.FindGameActivity"
             android:label="@string/title_activity_find_game"
+            android:screenOrientation="portrait"
             android:parentActivityName="com.example.digitalDeck.StartActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -58,6 +60,7 @@
         <activity
             android:name="com.example.digitalDeck.CreateGameActivity"
             android:label="@string/title_activity_create_game"
+            android:screenOrientation="portrait"
             android:parentActivityName="com.example.digitalDeck.FindGameActivity"
             android:windowSoftInputMode="stateHidden" >
             <meta-data
@@ -67,6 +70,7 @@
         <activity
             android:name="com.example.digitalDeck.LobbyActivity"
             android:label="@string/title_activity_lobby"
+            android:screenOrientation="portrait"
             android:parentActivityName="com.example.digitalDeck.FindGameActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -75,6 +79,7 @@
         <activity
             android:name="com.example.digitalDeck.PreviewLobbyActivity"
             android:label="@string/title_activity_preview_lobby"
+            android:screenOrientation="portrait"
             android:parentActivityName="com.example.digitalDeck.FindGameActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
