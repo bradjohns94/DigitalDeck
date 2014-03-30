@@ -52,7 +52,6 @@
             android:background="#E6E6E6"
             android:onClick="hideSoftKeyboard"
             android:weightSum="0" >
-    
 
             <TableRow
                 android:id="@+id/gameTypeRow"

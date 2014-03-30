@@ -58,7 +58,8 @@
         <activity
             android:name="com.example.digitalDeck.CreateGameActivity"
             android:label="@string/title_activity_create_game"
-            android:parentActivityName="com.example.digitalDeck.FindGameActivity" >
+            android:parentActivityName="com.example.digitalDeck.FindGameActivity"
+            android:windowSoftInputMode="stateHidden" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.yourdeal.FindGameActivity" />

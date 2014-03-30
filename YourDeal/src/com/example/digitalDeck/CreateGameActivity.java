@@ -22,6 +22,7 @@ import android.content.*;
 import android.preference.PreferenceManager;
 import android.widget.*;
 import android.view.View.OnClickListener;
+import android.view.inputmethod.InputMethodManager;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.RadioGroup.OnCheckedChangeListener; 
@@ -45,7 +46,7 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
 		super.onCreate(savedInstanceState);
         gameMode = gameModes[0];
         nextGameMode = gameModes[0];
-        setContentView(R.layout.activity_create_game); 
+        setContentView(R.layout.activity_create_game);
         text = new TextView(this);
 
         drawGameOptions(gameMode);
@@ -195,5 +196,10 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
 	public void onCheckedChanged(RadioGroup group, int checkId) {
         RadioButton checked = (RadioButton)group.findViewById(checkId);
         nextGameMode = checked.getText().toString();
+    }
+    
+    public void hideSoftKeyboard(View clicked){
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(clicked.getWindowToken(), 0);
     }
 }
