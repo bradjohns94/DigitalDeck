@@ -162,6 +162,8 @@ public class EuchreGame extends Game {
         trickIndex = 0;
         lead = -1;
         state = 9;
+        
+        process(new JSONObject());
     }
         
     public void processCall2(String call) {
@@ -590,6 +592,8 @@ public class EuchreGame extends Game {
 
     @Override
     public void process(JSONObject info) {
+        super.process(info);
+        
     	System.out.println("processing state " + state);
         if (state % 2 == 1) {
             if (state < 10) requestSignal();
@@ -652,9 +656,5 @@ public class EuchreGame extends Game {
     public String getPartner(int playerIndex) {
     	int partnerIndex = (playerIndex + 2) % 4;
     	return players.get(partnerIndex).get("name").toString();
-    }
-    
-    public void processInfo(JSONObject info) {
-    	process(info);
     }
 }

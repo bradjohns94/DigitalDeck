@@ -6,13 +6,15 @@ public class Service {
 	
 	private String title;
 	private String type;
+	private int gameSize;
 	private int players;
 	private Inet4Address[] addresses;
 	private int port;
 	
-	public Service(String aGameTitle, String aGameType, int aPlayerCount, Inet4Address[] someAddresses, int aPort) {
+	public Service(String aGameTitle, String aGameType, int aGameSize, int aPlayerCount, Inet4Address[] someAddresses, int aPort) {
 		title = aGameTitle;
 		type = aGameType;
+		gameSize = aGameSize;
 		players = aPlayerCount;
 		addresses = someAddresses;
 		port = aPort;
@@ -24,6 +26,10 @@ public class Service {
 
 	public String getType() {
 		return type;
+	}
+	
+	public int getGameSize() {
+	    return gameSize;
 	}
 	
 	public int getNumPlayers() {

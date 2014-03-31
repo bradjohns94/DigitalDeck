@@ -30,13 +30,16 @@ public abstract class Game {
     public Game(int aSize, String aTitle) {
         gameSize = aSize;
         players = new ArrayList<Player>();
+        playersByName = new HashMap<String, Player>();
         title = aTitle;
     }
 
     public abstract String getType();
-    
     public abstract void start();
-    public abstract void process(JSONObject info);
+    
+    public void process(JSONObject info) {
+        // Notify observers
+    }
 
     /**addPlayer
      * if the game is not full adds a player to the game and
@@ -49,7 +52,9 @@ public abstract class Game {
         
         players.add(aPlayer);
         playersByName.put((String)aPlayer.get("name"), aPlayer);
-        networkingDelegate.addedPlayer(aPlayer);
+        if (networkingDelegate != null) {
+            networkingDelegate.addedPlayer(aPlayer);
+        }
         return true;
     }
 
@@ -61,7 +66,9 @@ public abstract class Game {
     public void removePlayer(Player aPlayer) {
     	playersByName.remove(aPlayer.get("name"));
     	players.remove(aPlayer);
-    	networkingDelegate.removedPlayer(aPlayer);
+    	if (networkingDelegate != null) {
+        	networkingDelegate.removedPlayer(aPlayer);
+    	}
     }
 
     public int getNumPlayers() {

@@ -10,8 +10,6 @@ package com.example.digitalDeck;
 import java.io.IOException;
 import java.util.HashMap;
 
-import com.example.yourdeal.R;
-
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
@@ -105,14 +103,13 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         	newGame = new EuchreGame(title);
         }
         
-        // Create a server:
-        Server newServer = new Server(newGame);
-        newServer.start();
-        newGame.setNetworkingDelegate(newServer);
-        
-        // Finally, create the local player and add them to the game:
         Player newPlayer = new Player(hostName);
         newGame.addPlayer(newPlayer);
+        
+        // Create a server:
+        Server newServer = new Server(newGame);
+        newGame.setNetworkingDelegate(newServer);
+        newServer.start();
         
         YourDealApplication.game = newGame;
         YourDealApplication.networkingDelegate = newServer;

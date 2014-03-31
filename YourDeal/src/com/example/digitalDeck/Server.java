@@ -60,29 +60,35 @@ public class Server implements NetworkingDelegate, StreamDelegate {
 	 * Starts a JmDNS service so that other users can detect the lobby
 	 */
     public void createService() {
-        HashMap<String, String> props = new HashMap<String, String>();
-        props.put("gameType", game.getType());
-        props.put("gameSize", Integer.toString(game.getGameSize()));
-        props.put("playerCount", Integer.toString(game.getNumPlayers()));
-        props.put("hostUser", game.getHost());
-        
-        if (lock == null) {
-        	android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
-        	lock = wifi.createMulticastLock("DefinitelyCats");
-        	lock.setReferenceCounted(true);
-        }
-        lock.acquire(); // Lock multicast open
-        
-        if (broadcastService == null) {
-        	broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", game.getTitle(), serverListener.getPort(), 0, 0, props);
-        }
-        
-        try {
-            jmdns.registerService(broadcastService); // Broadcast!
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    jmdns = JmDNS.create();
+                    
+                    HashMap<String, String> props = new HashMap<String, String>();
+                    props.put("gameType", game.getType());
+                    props.put("gameSize", Integer.toString(game.getGameSize()));
+                    props.put("playerCount", Integer.toString(game.getNumPlayers()));
+                    props.put("hostUser", game.getHost());
+                     
+                    if (lock == null) {
+                        android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
+                        lock = wifi.createMulticastLock("DefinitelyCats");
+                        lock.setReferenceCounted(true);
+                    }
+                    lock.acquire(); // Lock multicast open
+                    
+                    if (broadcastService == null) {
+                        broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", game.getTitle(), serverListener.getPort(), 0, 0, props);
+                    }
+                    
+                    jmdns.registerService(broadcastService); // Broadcast!
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
     
     public void stopBroadcasting() {

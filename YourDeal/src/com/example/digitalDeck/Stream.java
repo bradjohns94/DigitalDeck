@@ -31,17 +31,16 @@ public class Stream {
             public void run() {
                 try {
                     socket = new Socket(aService.getFirstIP(), aService.getPort());
+                    reader = new Reader(socket);
+                    writer = new Writer(socket);
+                    new Thread(reader).start();
+                    new Thread(writer).start();
                 }
                 catch (IOException e) {
                     e.printStackTrace();
                 }
             }
-        }).run();
-        
-        reader = new Reader(socket);
-        writer = new Writer(socket);
-        new Thread(reader).start();
-        new Thread(writer).start();
+        }).start();
     }
     
     public void queueWrite(JSONObject data) {
@@ -158,7 +157,8 @@ public class Stream {
             
             try {
                 output = new DataOutputStream(socket.getOutputStream());
-                DOTA = new JSONObject("[\"DOTA\"]");
+                DOTA = new JSONObject();
+                DOTA.put("DOTA", "DOTA");
             } 
             catch (JSONException e) {
                 System.out.println("DOTA is wrong");

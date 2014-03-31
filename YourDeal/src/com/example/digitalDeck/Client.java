@@ -63,5 +63,27 @@ public class Client implements NetworkingDelegate, StreamDelegate {
         if (!aStream.equals(stream)) {
             System.out.println("what the heck");
         }
+        
+        try {
+            if (data.get("target").equals("game")) {
+                if (data.has("addPlayer")) {
+                    game.addPlayer(new RemotePlayer((String)data.get("addPlayer"), this));
+                }
+                
+                if (data.has("removePlayer")) {
+                    game.removePlayer(game.getPlayerNamed((String)data.get("removePlayer")));
+                }
+                
+                if (data.has("action")) {
+                    game.process(data);
+                }
+            }
+            else if (data.get("target").equals("player")) {
+                YourDealApplication.localPlayer.updateProperties(data);
+            }
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -6,8 +6,6 @@ import java.util.Hashtable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.example.yourdeal.R;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -43,7 +41,7 @@ public class EuchreUIActivity extends Activity {
 		setContentView(R.layout.activity_euchre_ui);
 		clickable = new ArrayList<ImageView>();
 		clicked = null;
-		euchre = YourDealApplication.game;
+		euchre = (EuchreGame)YourDealApplication.game;
 		localPlayer = YourDealApplication.localPlayer;
 		localPlayer.setUI(this);
 		euchre.start();
@@ -239,81 +237,86 @@ public class EuchreUIActivity extends Activity {
 	 * 3. Prompt the player to whether or not they would like to go alone
 	 * 4. Prompt the user on to whether or not they would like to decide trump
 	 */
-	public void queryUser(Hashtable<String, Object> info) {
-		String key = info.get("action").toString();
-		TextView displayMessage = (TextView)findViewById(R.id.message);
-		if (key == null) return;
-		clickable = new ArrayList<ImageView>();
-		if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
-			String card = euchre.getUIInfo(localPlayer.get("name").toString()).get("topCard").toString();
-			String[] options = {"Pick it up", "Pass"};
-			String message = getSuit(card) + "was turned up";
-			drawBooleanDialog(options, message, "Your Turn");
-		} else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
-			String message = "";
-			if (key.equals("drop")) {
-				message = "Select a Card to Put Down";
-			} else {
-				message = "Select a Card to Play";
-			}
-			displayMessage.setText(message);
-			displayMessage.setVisibility(View.VISIBLE);
-			String[] plays = (String[])info.get(key);
-			for (int i = 0; i < plays.length; i++) {
-				ImageView canClick = imageByName.get(plays[i]);
-				if (canClick != null) clickable.add(canClick);
-			}
-		} else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
-			String[] options = {"Yes", "No"};
-			drawBooleanDialog(options, "Go alone?", "");
-		} else if (key.equals("call")) { //Prompt the user to choose trump from the list provided or to pass
-			AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
-            dialogBuilder.setMessage("Select Game Type");
-            dialogBuilder.setTitle("Game Settings");
-			String[] options = (String[])info.get(key);
-			RadioGroup group = new RadioGroup(this);
-			for (int i = 0; i < options.length; i++) {
-				if (options[i].equals("pass")) continue;
-				RadioButton button = new RadioButton(this);
-				button.setText(options[i]);
-				group.addView(button);
-			}
-			final RadioHandler handler = new RadioHandler();
-			group.setOnCheckedChangeListener(handler);
-			dialogBuilder.setPositiveButton("Select", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					try {
-						JSONObject response = new JSONObject();
-						response.put("action", "response");
-						response.put("response", handler.getSelected());
-						euchre.process(response);
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-				}
-			}); //TODO make this forward the selected
-			dialogBuilder.setNegativeButton("Pass", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					try {
-						JSONObject response = new JSONObject();
-						response.put("action", "response");
-						response.put("response", "pass");
-						euchre.process(response);
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-				}
-			});
-			LinearLayout layout = new LinearLayout(this);
-            layout.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-            group.setLayoutParams(params);
-            layout.addView(group);
-            dialogBuilder.setView(layout);
-            dialogBuilder.show();
-		}
+	public void queryUser(JSONObject info) {
+		try {
+            String key = info.get("action").toString();
+            TextView displayMessage = (TextView)findViewById(R.id.message);
+            if (key == null) return;
+            clickable = new ArrayList<ImageView>();
+            if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
+            	String card = euchre.getUIInfo(localPlayer.get("name").toString()).get("topCard").toString();
+            	String[] options = {"Pick it up", "Pass"};
+            	String message = getSuit(card) + "was turned up";
+            	drawBooleanDialog(options, message, "Your Turn");
+            } else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
+            	String message = "";
+            	if (key.equals("drop")) {
+            		message = "Select a Card to Put Down";
+            	} else {
+            		message = "Select a Card to Play";
+            	}
+            	displayMessage.setText(message);
+            	displayMessage.setVisibility(View.VISIBLE);
+            	String[] plays = (String[])info.get(key);
+            	for (int i = 0; i < plays.length; i++) {
+            		ImageView canClick = imageByName.get(plays[i]);
+            		if (canClick != null) clickable.add(canClick);
+            	}
+            } else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
+            	String[] options = {"Yes", "No"};
+            	drawBooleanDialog(options, "Go alone?", "");
+            } else if (key.equals("call")) { //Prompt the user to choose trump from the list provided or to pass
+            	AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+                dialogBuilder.setMessage("Select Game Type");
+                dialogBuilder.setTitle("Game Settings");
+            	String[] options = (String[])info.get(key);
+            	RadioGroup group = new RadioGroup(this);
+            	for (int i = 0; i < options.length; i++) {
+            		if (options[i].equals("pass")) continue;
+            		RadioButton button = new RadioButton(this);
+            		button.setText(options[i]);
+            		group.addView(button);
+            	}
+            	final RadioHandler handler = new RadioHandler();
+            	group.setOnCheckedChangeListener(handler);
+            	dialogBuilder.setPositiveButton("Select", new DialogInterface.OnClickListener() {
+            		@Override
+            		public void onClick(DialogInterface dialog, int which) {
+            			try {
+            				JSONObject response = new JSONObject();
+            				response.put("action", "response");
+            				response.put("response", handler.getSelected());
+            				euchre.process(response);
+            			} catch (JSONException e) {
+            				e.printStackTrace();
+            			}
+            		}
+            	}); //TODO make this forward the selected
+            	dialogBuilder.setNegativeButton("Pass", new DialogInterface.OnClickListener() {
+            		@Override
+            		public void onClick(DialogInterface dialog, int which) {
+            			try {
+            				JSONObject response = new JSONObject();
+            				response.put("action", "response");
+            				response.put("response", "pass");
+            				euchre.process(response);
+            			} catch (JSONException e) {
+            				e.printStackTrace();
+            			}
+            		}
+            	});
+            	LinearLayout layout = new LinearLayout(this);
+                layout.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+                group.setLayoutParams(params);
+                layout.addView(group);
+                dialogBuilder.setView(layout);
+                dialogBuilder.show();
+            }
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
 	}
 	
 	/**processInput

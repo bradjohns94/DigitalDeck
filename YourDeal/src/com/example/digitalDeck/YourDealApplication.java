@@ -4,8 +4,10 @@ import android.app.Application;
 
 public class YourDealApplication extends Application {
 	public static NetworkingDelegate networkingDelegate;
+	public static Service selectedService; // TODO: Make this go away
 	public static Game game;
 	public static Player localPlayer;
+	public static UIDelegate currentUI;
 	
 	private static YourDealApplication singleton;
     public static YourDealApplication getInstance() {
@@ -16,5 +18,7 @@ public class YourDealApplication extends Application {
     public void onCreate() {
         super.onCreate();
         singleton = this;
+        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 }

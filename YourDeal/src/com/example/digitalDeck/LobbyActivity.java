@@ -1,7 +1,5 @@
 package com.example.digitalDeck;
 
-import com.example.yourdeal.R;
-
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -35,7 +33,7 @@ import javax.jmdns.*;
  * is starting to becoming rambling, you have my fullest apologies possible
  * employers who may be reading this.
  */
-public class LobbyActivity extends Activity {
+public class LobbyActivity extends Activity implements UIDelegate {
     Handler updateConversationHandler;
 
     /**onCreate
@@ -61,6 +59,7 @@ public class LobbyActivity extends Activity {
 
 		// Show the Up button in the action bar.
 		setupActionBar();
+		YourDealApplication.currentUI = this;
 	}
     
     /**onDestroy
@@ -170,97 +169,9 @@ public class LobbyActivity extends Activity {
         YourDealApplication.game.start();
         startActivity(toUI);
     }
-
-    /***************************************************************************************/
-
-	class UpdateUIThread implements Runnable {
-		/**updateUIThread
-		 * called on a change in input, specifies a string and a
-		 * socket that the string came from. If the string containing
-		 * the information must be removed from the players list the
-		 * thread removes it, otherwise it adds the player to the list
-		 * and updates the UI of the server and clients accordingly
-		 */
-		private String msg;
-		private Socket clientSocket;
-		
-		/**updateUIThread constructor
-		 * @param str the string representing the packet received
-		 * @param socket the socket the packet was received from
-		 * initializes the variables to be used by the run() method
-		 */
-		public UpdateUIThread(String str, Socket socket) {
-			this.msg = str;
-			clientSocket = socket;
-		}
-
-		/**run
-		 * adds or removes the player from the lobby accordingly
-		 * If the user is the server it sends out the change in
-		 * lobby information to the rest of the users
-		 */
-		@Override
-		public void run() {
-			String newPlayer = null;
-			String toRemove = null;
-			try {
-				JSONObject recieved = new JSONObject(msg);
-				newPlayer = recieved.get("addPlayer").toString();
-				toRemove = recieved.get("removePlayer").toString();
-			} catch(JSONException e) {
-				e.printStackTrace();
-			}
-			if (newPlayer != null) { //Add the player to the list
-				gamePlayers.add(newPlayer);
-				Hashtable<String, String> newPHash = new Hashtable<String, String>();
-				newPHash.put("target", "game");
-				newPHash.put("addPlayer", newPlayer);
-				JSONObject toSend = new JSONObject(newPHash);
-				if (isHost) { //In the case of a new client send it existing information
-					for (Socket s : outputs) {
-						if (s.equals(clientSocket)) continue;
-						sendMessage(s, toSend.toString());
-					}
-					for (int i = 0; i < gamePlayers.size(); i++) {
-						Hashtable<String, String> table = new Hashtable<String, String>();
-						table.put("target", "game");
-						table.put("addPlayer", gamePlayers.get(i));
-						final JSONObject JSON = new JSONObject(table);
-						try { //Send display names to client
-							runOnUiThread(new Runnable() {
-				                public void run() {
-				                	sendMessage(clientSocket, JSON.toString();
-				                }
-				            });
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
-				}
-				
-			} 
-			if (toRemove != null) {
-				gamePlayers.remove(toRemove);
-			}
-			runOnUiThread(new Runnable() { //Update the UI on the main thread
-                public void run() {
-                   drawPlayers();
-                }
-	        });
-			if (isHost) {
-				//Send out update to clients
-				Hashtable<String, Object> toSend = new Hashtable<String, Object>();
-				toSend.put("target", "game");
-				JSONObject JSON = new JSONObject(toSend);
-				if (newPlayer != null) {
-					System.out.println("added player: " + newPlayer);
-				}
-				for (int i = 0; i < outputs.size(); i++) {
-					Socket s = outputs.get(i);
-					System.out.println("Sending message: " + JSON.toString());
-					sendMessage(s, JSON.toString());
-				}
-			}
-		}
-	}
+    
+    @Override
+    public void updateUI() {
+        drawPlayers();
+    }
 }

@@ -1,10 +1,6 @@
 package com.example.digitalDeck;
 
-import java.util.Hashtable;
-
 import org.json.JSONObject;
-
-import com.example.yourdeal.R;
 
 import android.os.Bundle;
 import android.app.Activity;
@@ -16,29 +12,29 @@ import android.graphics.Color;
 import android.content.Intent;
 
 public class PreviewLobbyActivity extends Activity {
+    Client client;
     
-    private String[] gamePlayers;
-
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_preview_lobby);
 
-        Bundle playerBundle = this.getIntent().getExtras();
-        gamePlayers = playerBundle.getStringArray(null);
-        findPlayers(gamePlayers);
-
 		// Show the Up button in the action bar.
 		setupActionBar();
 		
+		Service service = YourDealApplication.selectedService;
 		
+		RemoteGame newGame = new RemoteGame(service.getGameSize(), service.getTitle(), service.getType());
+		client = new Client(newGame, service);
+		YourDealApplication.networkingDelegate = client;
+		
+		drawPlayers();
 	}
 
 	/**
 	 * Set up the {@link android.app.ActionBar}.
 	 */
 	private void setupActionBar() {
-
 		getActionBar().setDisplayHomeAsUpEnabled(true);
 
 	}
@@ -71,19 +67,18 @@ public class PreviewLobbyActivity extends Activity {
 		return super.onOptionsItemSelected(item);
 	}
 
-    public void findPlayers(String[] players) {
+	public void drawPlayers() {
         TableLayout table = (TableLayout)findViewById(R.id.currentPlayers);
         table.removeAllViews(); //Clear all previous views upon refresh
         LayoutParams tableParams = new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT);
 
-        //Create and add a new row with player information
-        for (int i = 0; i < players.length; i++) {
-            if (players[i] == null) break; //Break where lobby ends
+        //Create and add new rows with player info
+        for (Player aPlayer : YourDealApplication.game.getPlayers()) {
             //Draw the specified player
             TableRow row = new TableRow(this);
             row.setLayoutParams(tableParams);
             TextView name = new TextView(this);
-            name.setText(players[i]);
+            name.setText((String)aPlayer.get("name"));
             name.setTextAppearance(this, android.R.style.TextAppearance_Large);
             name.setPadding(0,0,0,10);
             row.addView(name);
@@ -94,14 +89,12 @@ public class PreviewLobbyActivity extends Activity {
             View line = new View(this);
             line.setLayoutParams(new TableRow.LayoutParams(LayoutParams.FILL_PARENT, 1));
             line.setBackgroundColor(Color.parseColor("#808080"));
-            table.addView(line);
         }
-        setTitle(players[0] + "'s Game");
+        setTitle(YourDealApplication.game.getTitle());
     }
 
     public void openLobby(View clicked) {
         Intent toLobby = new Intent(this, LobbyActivity.class);
-        toLobby.putExtra("caller", "PreviewLobbyActivity");
         startActivity(toLobby);
     }
 }

@@ -26,12 +26,10 @@ import java.util.ArrayList;
 
 import javax.jmdns.*;
 
-import com.example.yourdeal.R;
-
 public class FindGameActivity extends Activity implements OnClickListener {
 
     private ArrayList<TableRow> gameRows;
-    private ArrayList<Service> games;
+    private ArrayList<Service> services;
     android.net.wifi.WifiManager.MulticastLock lock;
     JmDNS jmdns;
     
@@ -44,18 +42,11 @@ public class FindGameActivity extends Activity implements OnClickListener {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_find_game);
         gameRows = new ArrayList<TableRow>();
-        games = new ArrayList<Service>();
-        /*games.add(new EuchreGame("Bruce Wayne", "Batgame"));
-        games.get(0).addPlayer("Hal Jordan");
-        games.get(0).addPlayer("Barry Allan");
-        games.add(new EuchreGame("Arthur Curry", "Go Fish with Aquaman"));
-        games.get(1).addPlayer("Mera");
-        games.get(1).addPlayer("Flounder");*/
+        services = new ArrayList<Service>();
+        
 		// Show the Up button in the action bar.
 		setupActionBar();
-
-        //get the text passed in from select game
-        String title = "Games Near You";
+		setTitle("Games Near You");
         
         new Thread() {
             public void run() {
@@ -69,7 +60,6 @@ public class FindGameActivity extends Activity implements OnClickListener {
             }
         }.start();
 
-        setTitle(title);
         drawGames();
 	}
 	
@@ -165,18 +155,19 @@ public class FindGameActivity extends Activity implements OnClickListener {
         table.setColumnStretchable(1, true);
         LayoutParams tableParams = new TableRow.LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT, 1);
 
-        for (int i = 0; i < games.size(); i++) {
+        for (Service service : services) {
+            System.out.println("drawing service: " + service);
             TableRow row = new TableRow(this);
             row.setLayoutParams(tableParams);
             //Text view for the game title
             TextView title = new TextView(this);
-            title.setText(games.get(i).getTitle());
+            title.setText(service.getTitle());
             title.setTextAppearance(this, android.R.style.TextAppearance_Large);
             title.setPadding(0,0,0,10);
             row.addView(title);
 
             //Text view for the current number of players
-            String statusText = games.get(i).getNumPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
+            String statusText = service.getNumPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
             TextView status = new TextView(this);
             status.setText(statusText);
             status.setTextAppearance(this, android.R.style.TextAppearance_Large);
@@ -209,17 +200,9 @@ public class FindGameActivity extends Activity implements OnClickListener {
             }
         }
 
-        Intent toPreviewLobby = new Intent(this, LobbyActivity.class);
-        Service serv = games.get(index);
-        toPreviewLobby.putExtra("title", serv.getTitle());
-        toPreviewLobby.putExtra("type", serv.getType());
-        toPreviewLobby.putExtra("numPlayers", Integer.toString(serv.getNumPlayers()));
-        toPreviewLobby.putExtra("port", serv.getPort());
-        toPreviewLobby.putExtra("caller", "PreviewLobbyActivity");
-        Bundle ips = new Bundle();
-        String[] addr = serv.getIPs();
-        ips.putStringArray("ips", addr);
-        toPreviewLobby.putExtras(ips);
+        YourDealApplication.selectedService = services.get(index);
+        
+        Intent toPreviewLobby = new Intent(this, PreviewLobbyActivity.class);
         startActivity(toPreviewLobby);
     }
     
@@ -238,9 +221,9 @@ public class FindGameActivity extends Activity implements OnClickListener {
         public void serviceRemoved(ServiceEvent event) {
             ServiceInfo info = event.getInfo();
             String title = info.getName();
-            for (Service g : games) {
+            for (Service g : services) {
                 if (g.getTitle().equals(title)) {
-                    games.remove(g);
+                    services.remove(g);
                     break;
                 }
             }
@@ -254,25 +237,31 @@ public class FindGameActivity extends Activity implements OnClickListener {
         public void serviceResolved(ServiceEvent event) {
             //TODO create list item
             ServiceInfo info = event.getInfo();
+            System.out.println("resolved");
             addService(info);
         }
     }
     
     private void addService(ServiceInfo info) {
     	ServiceInfo[] infos = { info };
+    	System.out.println("adding service");
     	this.addServices(infos);
     }
     
     private void addServices(ServiceInfo[] someInfos) {
     	for (ServiceInfo info : someInfos) {
+    	    System.out.println(info);
     		String title = info.getName();
             String gameType = info.getPropertyString("gameType");
+            // TODO
+            int gameSize = 4;//Integer.parseInt(info.getPropertyString("gameSize"));
             int playerCount = Integer.parseInt(info.getPropertyString("playerCount"));
             Inet4Address[] addresses = info.getInet4Addresses();
             int port = info.getPort();
             
-            Service game = new Service(title, gameType, playerCount, addresses, port);
-            games.add(game);
+            Service game = new Service(title, gameType, gameSize, playerCount, addresses, port);
+            System.out.println(game);
+            services.add(game);
     	}
     	
         runOnUiThread(new Runnable() {
