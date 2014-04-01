@@ -94,17 +94,12 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         EditText titleText = (EditText)findViewById(R.id.gameTitleText);
         String title = titleText.getText().toString();
         //TODO customize game type by specifics
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String hostName = prefs.getString("display_name", "The Man in the Tan Jacket");
         
         // Create the proper type of game:
         Game newGame = null;
         if (gameMode.equals("Euchre")) {
         	newGame = new EuchreGame(title);
         }
-        
-        Player newPlayer = new Player(hostName);
-        newGame.addPlayer(newPlayer);
         
         // Create a server:
         Server newServer = new Server(newGame);
@@ -113,7 +108,6 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
         
         YourDealApplication.game = newGame;
         YourDealApplication.networkingDelegate = newServer;
-        YourDealApplication.localPlayer = newPlayer;
 
         Intent toLobby = new Intent(this, LobbyActivity.class);
         startActivity(toLobby);

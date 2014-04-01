@@ -3,7 +3,6 @@ package com.example.digitalDeck;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -18,37 +17,39 @@ public class Stream {
     private Socket socket;
     private StreamDelegate delegate;
     
-    public Stream(Socket aSocket) { // Use an existing socket
+    public Stream(Socket aSocket, StreamDelegate aDelegate) { // Use an existing socket
         socket = aSocket;
+        delegate = aDelegate;
         reader = new Reader(aSocket);
         writer = new Writer(aSocket);
         new Thread(reader).start();
         new Thread(writer).start();
     }
     
-    public Stream(final Service aService) { // Make the socket ourselves
+    public Stream(final Service aService, StreamDelegate aDelegate) { // Make the socket ourselves
+        delegate = aDelegate;
+        
         new Thread(new Runnable() {
             public void run() {
                 try {
                     socket = new Socket(aService.getFirstIP(), aService.getPort());
-                    reader = new Reader(socket);
-                    writer = new Writer(socket);
-                    new Thread(reader).start();
-                    new Thread(writer).start();
                 }
                 catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
+        
+        while (socket == null || !socket.isConnected()) {} // TODO aaaaaaaaaaaa
+        
+        reader = new Reader(socket);
+        writer = new Writer(socket);
+        new Thread(reader).start();
+        new Thread(writer).start();
     }
     
     public void queueWrite(JSONObject data) {
         writer.queueWrite(data);
-    }
-    
-    public void setDelegate(StreamDelegate aDelegate) {
-        delegate = aDelegate;
     }
     
     public Reader getReader() {
@@ -85,9 +86,10 @@ public class Stream {
          * Initializes the variables to be used in the run() method of the thread
          */
         public Reader(Socket clientSocket) {
+            System.out.println("starting reader");
             socket = clientSocket;
             try {
-                input = new DataInputStream(this.socket.getInputStream());
+                input = new DataInputStream(socket.getInputStream());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -121,7 +123,6 @@ public class Stream {
                     // Read the payload
                     input.readFully(payloadBuf.array(), 0, payloadSize);
                     String read = new String(payloadBuf.array(), Charset.forName("UTF-8"));
-                    System.out.println(read);
                     
                     JSONObject payload = new JSONObject(read);
 
@@ -130,7 +131,8 @@ public class Stream {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
-                    System.out.println("reader socket closed");
+                    e.printStackTrace();
+                    //System.out.println("reader socket closed");
                 }
             }
         }
@@ -152,6 +154,7 @@ public class Stream {
         private JSONObject DOTA;
         
         public Writer(Socket aSocket) {
+            System.out.println("starting writer");
             socket = aSocket;
             queue = new LinkedBlockingQueue<JSONObject>();
             
@@ -161,7 +164,6 @@ public class Stream {
                 DOTA.put("DOTA", "DOTA");
             } 
             catch (JSONException e) {
-                System.out.println("DOTA is wrong");
                 e.printStackTrace();
             } 
             catch (IOException e) {
@@ -185,7 +187,7 @@ public class Stream {
                 
                 // Now write them to the socket in order:
                 output.write(buf.array(), 0, 9);
-                output.writeUTF(payloadString);
+                output.writeBytes(payload.toString());
             }
             catch (InterruptedException e) {
                 e.printStackTrace();

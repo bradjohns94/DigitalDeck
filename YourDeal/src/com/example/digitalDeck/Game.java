@@ -37,9 +37,7 @@ public abstract class Game {
     public abstract String getType();
     public abstract void start();
     
-    public void process(JSONObject info) {
-        // Notify observers
-    }
+    public abstract void process(JSONObject info);
 
     /**addPlayer
      * if the game is not full adds a player to the game and

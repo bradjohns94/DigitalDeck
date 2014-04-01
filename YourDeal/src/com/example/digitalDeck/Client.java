@@ -5,14 +5,30 @@ import org.json.JSONObject;
 
 public class Client implements NetworkingDelegate, StreamDelegate {
 	private RemoteGame game;
+	private Service service;
 	private Stream stream;
 	
 	public Client(RemoteGame aRemoteGame, Service aService) {
 		game = aRemoteGame;
-		
-		//Start a connection to the server
-        stream = new Stream(aService);
-        stream.setDelegate(this);
+		service = aService;
+	}
+	
+	public void connect() {
+	    //Start a connection to the server
+        stream = new Stream(service, this);
+        
+        JSONObject requestPlayers = new JSONObject();
+        try {
+            requestPlayers.put("request", "playerList");
+            stream.queueWrite(requestPlayers);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+	}
+	
+	public void disconnect() {
+	    stream.stop();
 	}
 	
 	public RemoteGame getGame() {
@@ -26,8 +42,12 @@ public class Client implements NetworkingDelegate, StreamDelegate {
 
     @Override
     public void addedPlayer(Player aPlayer) {
+        if (aPlayer != YourDealApplication.localPlayer) return;
+        
         try {
+            System.out.println("forwarding player info to server: " + aPlayer.get("name"));
             JSONObject data = new JSONObject();
+            data.put("target", "game");
             data.put("addPlayer", aPlayer.get("name"));
             stream.queueWrite(data);
         }
@@ -38,8 +58,11 @@ public class Client implements NetworkingDelegate, StreamDelegate {
 
     @Override
     public void removedPlayer(Player aPlayer) {
+        if (aPlayer != YourDealApplication.localPlayer) return;
+        
         try {
             JSONObject data = new JSONObject();
+            data.put("target", "game");
             data.put("removePlayer", aPlayer.get("name"));
             stream.queueWrite(data);
         }
@@ -64,6 +87,9 @@ public class Client implements NetworkingDelegate, StreamDelegate {
             System.out.println("what the heck");
         }
         
+        System.out.println("received:");
+        System.out.println(data);
+        
         try {
             if (data.get("target").equals("game")) {
                 if (data.has("addPlayer")) {
@@ -85,5 +111,16 @@ public class Client implements NetworkingDelegate, StreamDelegate {
         catch (JSONException e) {
             e.printStackTrace();
         }
+        
+        if (YourDealApplication.currentUI != null) {
+            YourDealApplication.currentUI.updateUI();
+        }
+        else {
+            System.out.println("WHAT THE HECK");
+        }
+    }
+    
+    public boolean isUserGiantPurpleMonsterThingyMagigitWhatAmIWritingRightNow() {
+        return false;
     }
 }

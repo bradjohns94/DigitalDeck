@@ -592,8 +592,6 @@ public class EuchreGame extends Game {
 
     @Override
     public void process(JSONObject info) {
-        super.process(info);
-        
     	System.out.println("processing state " + state);
         if (state % 2 == 1) {
             if (state < 10) requestSignal();

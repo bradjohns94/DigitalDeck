@@ -11,7 +11,7 @@ import android.view.ViewGroup.LayoutParams;
 import android.graphics.Color;
 import android.content.Intent;
 
-public class PreviewLobbyActivity extends Activity {
+public class PreviewLobbyActivity extends Activity implements UIDelegate {
     Client client;
     
 	@Override
@@ -27,6 +27,11 @@ public class PreviewLobbyActivity extends Activity {
 		RemoteGame newGame = new RemoteGame(service.getGameSize(), service.getTitle(), service.getType());
 		client = new Client(newGame, service);
 		YourDealApplication.networkingDelegate = client;
+		YourDealApplication.game = newGame;
+		YourDealApplication.currentUI = this;
+		
+		newGame.setNetworkingDelegate(client);
+		client.connect();
 		
 		drawPlayers();
 	}
@@ -93,8 +98,13 @@ public class PreviewLobbyActivity extends Activity {
         setTitle(YourDealApplication.game.getTitle());
     }
 
-    public void openLobby(View clicked) {
+    public void openLobby(View clicked) {        
         Intent toLobby = new Intent(this, LobbyActivity.class);
         startActivity(toLobby);
+    }
+
+    @Override
+    public void updateUI() {
+        drawPlayers();
     }
 }

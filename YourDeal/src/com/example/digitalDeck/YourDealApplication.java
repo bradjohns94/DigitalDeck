@@ -18,7 +18,5 @@ public class YourDealApplication extends Application {
     public void onCreate() {
         super.onCreate();
         singleton = this;
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 }

@@ -13,14 +13,14 @@
                                                                                 
 =============================================================================================
 Authors:
-	Bill Doyle
+	Bill Doyle*
 	Jason Elston*
 	Bradley Johns*
 	Taylor Morris
 
 * Android Edition Specialist
 =============================================================================================
-Sprint One Release: Agile Artichoke
+Sprint Two Release: Belligerent Brusselsprout
 =============================================================================================
 OVERVIEW
 	The starting interface to the Android Edition of a network-based Card game mobile app
@@ -28,8 +28,7 @@ OVERVIEW
 	well as edit limited custom settings of the app. The application is designed to allow
 	the user to create a game by editing custom settings that are both general to card
 	games as a whole, as well as game specific settings and house rules. This release
-	comes equipped with a limited version of this functionality specific to the games of
-	Hearts and Euchre.
+	comes equipped with a limited version of this functionality specific to Euchre.
 =============================================================================================
 OPERATION
 	1. Start:		The user can press the play button to look for available

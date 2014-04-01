@@ -47,6 +47,8 @@ public class LobbyActivity extends Activity implements UIDelegate {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_lobby);
 		
+		YourDealApplication.currentUI = this;
+		
         updateConversationHandler = new Handler();
 
         if (YourDealApplication.networkingDelegate.isHostingGame()) {
@@ -55,11 +57,15 @@ public class LobbyActivity extends Activity implements UIDelegate {
             start.setVisibility(View.VISIBLE);
         }
         
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Player newPlayer = new Player(prefs.getString("display_name", "The Man in the Tan Jacket"));
+        YourDealApplication.game.addPlayer(newPlayer);
+        YourDealApplication.localPlayer = newPlayer;
+        
         drawPlayers();
 
 		// Show the Up button in the action bar.
 		setupActionBar();
-		YourDealApplication.currentUI = this;
 	}
     
     /**onDestroy

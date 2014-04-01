@@ -70,14 +70,14 @@ public class Server implements NetworkingDelegate, StreamDelegate {
                     props.put("gameSize", Integer.toString(game.getGameSize()));
                     props.put("playerCount", Integer.toString(game.getNumPlayers()));
                     props.put("hostUser", game.getHost());
-                     
+                    /* Turns out you don't need a multicast lock to broadcast!
                     if (lock == null) {
                         android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
                         lock = wifi.createMulticastLock("DefinitelyCats");
                         lock.setReferenceCounted(true);
                     }
                     lock.acquire(); // Lock multicast open
-                    
+                    */
                     if (broadcastService == null) {
                         broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", game.getTitle(), serverListener.getPort(), 0, 0, props);
                     }
@@ -88,12 +88,12 @@ public class Server implements NetworkingDelegate, StreamDelegate {
                     e.printStackTrace();
                 }
             }
-        });
+        }).start();
     }
     
     public void stopBroadcasting() {
     	jmdns.unregisterService(broadcastService);
-    	lock.release();
+    	//lock.release();
     }
 
     public void addedPlayer(Player aPlayer) {
@@ -169,9 +169,27 @@ public class Server implements NetworkingDelegate, StreamDelegate {
     }
     
     public void streamReceivedData(Stream aStream, JSONObject data) {
+        System.out.println("streamReceivedData: " + data);
         try {
+            if (data.has("request")) {
+                String request = (String)data.get("request");
+                System.out.println("request get: " + request);
+                
+                if (request.equals("playerList")) {
+                    System.out.println("getPlayers: " + game.getPlayers());
+                    for (Player player : game.getPlayers()) {
+                        JSONObject playerJSON = new JSONObject();
+                        playerJSON.put("target", "game");
+                        playerJSON.put("addPlayer", player.get("name"));
+                        aStream.queueWrite(playerJSON);
+                    }
+                }
+            }
+            
             if (data.has("addPlayer")) {
-                String name = data.get("addPlayer").toString();
+                String name = (String)data.get("addPlayer");
+                // The stream to this player has already been stored, now find it and add them to the game.
+                // This is necessary to keep the association between player and stream before they formally join.
                 for (RemotePlayer player : streamsByPlayer.keySet()) {
                     // TODO: Add playersByStream
                     if (streamsByPlayer.get(player).equals(aStream)) {
@@ -240,7 +258,8 @@ public class Server implements NetworkingDelegate, StreamDelegate {
 					newSocket.setKeepAlive(true);
 					System.out.println("Connection established!");
 					
-					streamsByPlayer.put(new RemotePlayer(null, Server.this), new Stream(newSocket));
+					Stream newStream = new Stream(newSocket, Server.this);
+					streamsByPlayer.put(new RemotePlayer(null, Server.this), newStream);
 
 				} catch (IOException e) {
 				    System.out.println("closed serversocket");
@@ -260,201 +279,4 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             }
 		}
 	}
-    
-    private class ClientStream {
-        ClientReader reader;
-        ClientWriter writer;
-        Socket socket;
-        
-        public ClientStream(Socket aSocket) {
-            socket = aSocket;
-            reader = new ClientReader(aSocket);
-            writer = new ClientWriter(aSocket);
-            new Thread(reader).start();
-            new Thread(writer).start();
-        }
-        
-        public void queueWrite(JSONObject data) {
-            writer.queueWrite(data);
-        }
-        
-        public ClientReader getReader() {
-            return reader;
-        }
-        
-        public ClientWriter getWriter() {
-            return writer;
-        }
-        
-        public void stop() {
-            try {
-                writer.stop();
-                reader.stop();
-                if (!socket.isClosed()) {
-                    socket.close();
-                }
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    private class ClientReader implements Runnable {
-		/**CommuncationThread
-		 * Reads from input over the specified socket and if it receives
-		 * new information sends it to the UpdateUIThread
-		 */
-		private Socket socket;
-		private DataInputStream input;
-
-		/**CommunicationThread constructor
-		 * @param clientSocket the socket the communication takes place over
-		 * Initializes the variables to be used in the run() method of the thread
-		 */
-		public ClientReader(Socket clientSocket) {
-			socket = clientSocket;
-			try {
-				input = new DataInputStream(this.socket.getInputStream());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-		/**run
-		 * Continuously reads from the input buffer of the socket and if the input changes
-		 * forwards the information to the updateUIThread
-		 */
-		public void run() {
-			while (!Thread.currentThread().isInterrupted() && !socket.isClosed()) {
-				try {
-					ByteBuffer buf = ByteBuffer.allocate(9);
-					input.readFully(buf.array(), 0, 9);
-					
-					int magic = buf.getInt(0); 
-					if (magic != 0x444c4447) {
-						System.out.println("Magic: " + magic);
-						continue;
-					}
-					
-					byte type = buf.get(4); //get the packet type
-					if (type != 0x0f) {
-						System.out.println("Non-JSON packet, skipping reading payload");
-						continue;
-					}
-					
-					int payloadSize = buf.getInt(5);
-					ByteBuffer payloadBuf = ByteBuffer.allocate(payloadSize);
-					
-					// Read the payload
-					input.readFully(payloadBuf.array(), 0, payloadSize);
-					String read = new String(payloadBuf.array(), Charset.forName("UTF-8"));
-					System.out.println(read);
-/*					
-					JSONObject payload = new JSONObject(read);
-
-					if (payload.has("addPlayer")) {
-						String name = payload.get("addPlayer").toString();
-						for (RemotePlayer player : streamsByPlayer.keySet()) {
-						    if (streamsByPlayer.get(player).getReader().equals(this)) {
-						        player.put("name", name);
-						        game.addPlayer(player);
-						        break;
-						    }
-						}
-					}
-					
-					if (payload.has("removePlayer")) {
-						// TODO
-					}
-					
-					if (payload.has("action")) {
-					    game.process(payload);
-					}
-
-				} catch (JSONException e) {
-					e.printStackTrace();
-*/				} catch (IOException e) {
-				    System.out.println("reader socket closed");
-				}
-			}
-		}
-		
-		public void stop() {
-		    try {
-                socket.close();
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-		}
-	}
-    
-    private static class ClientWriter implements Runnable {
-    	private Socket socket;
-    	private DataOutputStream output;
-    	private LinkedBlockingQueue<JSONObject> queue;
-    	private JSONObject DOTA;
-    	
-    	public ClientWriter(Socket aSocket) {
-    		socket = aSocket;
-    		queue = new LinkedBlockingQueue<JSONObject>();
-    		
-    		try {
-    			output = new DataOutputStream(socket.getOutputStream());
-				DOTA = new JSONObject("[\"DOTA\"]");
-			} 
-    		catch (JSONException e) {
-				System.out.println("DOTA is wrong");
-				e.printStackTrace();
-			} 
-    		catch (IOException e) {
-				e.printStackTrace();
-			}
-    	}
-    	
-		@Override
-		public void run() {
-			try {
-				JSONObject payload = queue.take(); // Blocks until there is something to take
-				if (payload.equals(DOTA)) return;
-				
-				String payloadString = payload.toString();
-				
-				// Build the header:
-				ByteBuffer buf = ByteBuffer.allocate(9);
-				buf.putInt(0x444c4447);
-				buf.put((byte)0x0f);
-				buf.putInt(payloadString.length());
-				
-				// Now write them to the socket in order:
-				output.write(buf.array(), 0, 9);
-				output.writeUTF(payloadString);
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			catch (IOException e) {
-				System.out.println("writer socket closed");
-			}
-		}
-		
-		public void queueWrite(JSONObject payload) {
-			try {
-				queue.put(payload);
-			}
-			catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		public void stop() {
-		    try {
-                queue.put(DOTA);
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-		}
-    }
 }
