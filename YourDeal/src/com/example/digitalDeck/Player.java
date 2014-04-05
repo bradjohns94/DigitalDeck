@@ -13,9 +13,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class Player {
-	
-	private EuchreUIActivity UI;
-	
 	protected JSONObject properties;
 
     /**Player constructor
@@ -68,7 +65,9 @@ public class Player {
      */
     public void updateProperties(JSONObject update) {
         helperUpdate(update, properties);
-        UI.updateUI();
+        if (YourDealApplication.currentUI != null) { // TODO: Decouple this
+            YourDealApplication.currentUI.updateUI();
+        }
     }
     
     /**helperUpdate
@@ -95,9 +94,5 @@ public class Player {
     	catch (JSONException e) {
     		e.printStackTrace();
     	}
-    }
-    
-    public void setUI(EuchreUIActivity euchre) {
-    	UI = euchre;
     }
 }

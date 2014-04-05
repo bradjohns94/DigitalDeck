@@ -16,6 +16,11 @@ public interface NetworkingDelegate {
      */
     public boolean isHostingGame();
     
+    /**lobbyIsClosing
+     * Called by the lobby when the user has decided to leave.
+     */
+    public void lobbyIsClosing();
+    
     /* Both the Server and Client implement all of these methods.
      * On the Server, they are called by the Game and by RemotePlayers to forward info to Clients.
      * On the Client, they are called by the RemoteGame to send information back to the Server, and updatedPlayer() is never actually used. A casualty of convenience.

@@ -22,15 +22,21 @@ import javax.jmdns.ServiceInfo;
 
 import org.json.*;
 
+import android.os.Looper;
+
 public class Server implements NetworkingDelegate, StreamDelegate {
     private HashMap<RemotePlayer, Stream> streamsByPlayer;
+    private ArrayList<Stream> pendingStreams;
     private ServerListener serverListener;
     private Thread serverThread;
     private Game game;
+    private Looper serverLooper;
     
     private android.net.wifi.WifiManager.MulticastLock lock;
     private JmDNS jmdns;
     private ServiceInfo broadcastService;
+    private HashMap<String, String> broadcastProperties;
+    private boolean broadcasting;
 	
     /**Server constructor
      * @param newGame the game that the server is hosting
@@ -40,17 +46,30 @@ public class Server implements NetworkingDelegate, StreamDelegate {
      */
     public Server(Game newGame) {
         streamsByPlayer = new HashMap<RemotePlayer, Stream>();
+        pendingStreams = new ArrayList<Stream>();
         serverListener = new ServerListener(0);
         game = newGame;
     }
     
     public void start() {
-    	serverThread = new Thread(serverListener);
-    	serverThread.start();
-    	this.createService();
+        new Thread(new Runnable() {
+            public void run() {
+                Looper.prepare();
+                serverLooper = Looper.myLooper();
+                
+                serverThread = new Thread(serverListener);
+                serverThread.start();
+                Server.this.createService();
+                
+                Looper.loop();
+            }
+        }).start();
     }
     
     public void stop() {
+        if (broadcasting) {
+            stopBroadcasting();
+        }
         serverListener.stop();
     }
     
@@ -60,39 +79,49 @@ public class Server implements NetworkingDelegate, StreamDelegate {
 	 * Starts a JmDNS service so that other users can detect the lobby
 	 */
     public void createService() {
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    jmdns = JmDNS.create();
-                    
-                    HashMap<String, String> props = new HashMap<String, String>();
-                    props.put("gameType", game.getType());
-                    props.put("gameSize", Integer.toString(game.getGameSize()));
-                    props.put("playerCount", Integer.toString(game.getNumPlayers()));
-                    props.put("hostUser", game.getHost());
-                    /* Turns out you don't need a multicast lock to broadcast!
-                    if (lock == null) {
-                        android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
-                        lock = wifi.createMulticastLock("DefinitelyCats");
-                        lock.setReferenceCounted(true);
-                    }
-                    lock.acquire(); // Lock multicast open
-                    */
-                    if (broadcastService == null) {
-                        broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", game.getTitle(), serverListener.getPort(), 0, 0, props);
-                    }
-                    
-                    jmdns.registerService(broadcastService); // Broadcast!
-                }
-                catch (IOException e) {
-                    e.printStackTrace();
-                }
+        try {
+            jmdns = JmDNS.create();
+            updateProperties();
+            
+            if (broadcastService == null) {
+                broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", 
+                                                      game.getTitle(), 
+                                                      serverListener.getPort(), 
+                                                      0, 
+                                                      0, 
+                                                      broadcastProperties);
             }
-        }).start();
+            
+            jmdns.registerService(broadcastService); // Broadcast!
+            broadcasting = true;
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**updateProperties
+     * Regenerates the DNSText object and updates the broadcast if it already exists.
+     */
+    private void updateProperties() {
+        System.out.println("updating properties");
+        if (broadcastProperties == null) {
+            broadcastProperties = new HashMap<String, String>();
+        }
+        
+        broadcastProperties.put("gameType", game.getType());
+        broadcastProperties.put("gameSize", Integer.toString(game.getGameSize()));
+        broadcastProperties.put("playerCount", Integer.toString(game.getNumPlayers()));
+        
+        if (broadcastService != null) { // This is a hack
+            broadcastService.setText(broadcastProperties);
+        }
     }
     
     public void stopBroadcasting() {
+        System.out.println("unregistering service " + broadcastService);
     	jmdns.unregisterService(broadcastService);
+    	broadcasting = false;
     	//lock.release();
     }
 
@@ -105,7 +134,14 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             e.printStackTrace();
         }
         
-        for (Stream stream : streamsByPlayer.values()) {
+        if (broadcasting) {
+            System.out.println("updating properties after adding player");
+            updateProperties();
+        }
+        
+        for (Player player : streamsByPlayer.keySet()) {
+            Stream stream = streamsByPlayer.get(player);
+            System.out.println("server is queuing write to " + player.get("name"));
             stream.queueWrite(updates);
         }
     }
@@ -117,6 +153,10 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             updates.put("removedPlayer", aPlayer.get("name"));
         } catch (JSONException e) {
             e.printStackTrace();
+        }
+        
+        if (broadcasting) {
+            updateProperties();
         }
         
         for (Stream stream : streamsByPlayer.values()) {
@@ -188,16 +228,10 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             
             if (data.has("addPlayer")) {
                 String name = (String)data.get("addPlayer");
-                // The stream to this player has already been stored, now find it and add them to the game.
-                // This is necessary to keep the association between player and stream before they formally join.
-                for (RemotePlayer player : streamsByPlayer.keySet()) {
-                    // TODO: Add playersByStream
-                    if (streamsByPlayer.get(player).equals(aStream)) {
-                        player.put("name", name);
-                        game.addPlayer(player);
-                        break;
-                    }
-                }
+                RemotePlayer newPlayer = new RemotePlayer(name, this);
+                streamsByPlayer.put(newPlayer, aStream);
+                pendingStreams.remove(aStream);
+                game.addPlayer(newPlayer);
             }
             
             if (data.has("removePlayer")) {
@@ -212,6 +246,15 @@ public class Server implements NetworkingDelegate, StreamDelegate {
         catch (JSONException e) {
             e.printStackTrace();
         }
+        
+        if (YourDealApplication.currentUI != null) {
+            YourDealApplication.currentUI.updateUI(); // Will run on the correct Thread.
+        }
+    }
+    
+    @Override
+    public void lobbyIsClosing() {
+        stop();
     }
     
     /******************************************************************************************************************/
@@ -251,19 +294,19 @@ public class Server implements NetworkingDelegate, StreamDelegate {
     	 * communication Thread and changes openInConnection to the next available connection
     	 */
 		public void run() {
-			while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
-				try {
+			try {
+			    while (!Thread.currentThread().isInterrupted() && !serverSocket.isClosed()) {
 					Socket newSocket = serverSocket.accept();
 					
 					newSocket.setKeepAlive(true);
 					System.out.println("Connection established!");
 					
-					Stream newStream = new Stream(newSocket, Server.this);
-					streamsByPlayer.put(new RemotePlayer(null, Server.this), newStream);
-
-				} catch (IOException e) {
-				    System.out.println("closed serversocket");
+					Stream newStream = new Stream(newSocket, Server.this, serverLooper);
+					pendingStreams.add(newStream);
 				}
+			}
+			catch (IOException e) {
+			    System.out.println("closed serversocket");
 			}
 		}
 		

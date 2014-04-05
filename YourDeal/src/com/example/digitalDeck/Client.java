@@ -1,7 +1,13 @@
 package com.example.digitalDeck;
 
+import java.io.IOException;
+import java.net.Socket;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.os.Handler;
+import android.os.Looper;
 
 public class Client implements NetworkingDelegate, StreamDelegate {
 	private RemoteGame game;
@@ -14,17 +20,29 @@ public class Client implements NetworkingDelegate, StreamDelegate {
 	}
 	
 	public void connect() {
-	    //Start a connection to the server
-        stream = new Stream(service, this);
-        
-        JSONObject requestPlayers = new JSONObject();
-        try {
-            requestPlayers.put("request", "playerList");
-            stream.queueWrite(requestPlayers);
-        }
-        catch (JSONException e) {
-            e.printStackTrace();
-        }
+	    new Thread(new Runnable() {
+            public void run() {
+                Looper.prepare();
+                
+                try {
+                    Socket socket = new Socket(service.getFirstIP(), service.getPort());
+                    stream = new Stream(socket, Client.this, Looper.myLooper());
+                    
+                    JSONObject requestPlayers = new JSONObject();
+                    requestPlayers.put("request", "playerList");
+                    stream.queueWrite(requestPlayers);
+                    System.out.println("wrote player request");
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+                catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                
+                Looper.loop();
+            }
+	    }).start();
 	}
 	
 	public void disconnect() {
@@ -87,8 +105,7 @@ public class Client implements NetworkingDelegate, StreamDelegate {
             System.out.println("what the heck");
         }
         
-        System.out.println("received:");
-        System.out.println(data);
+        System.out.println("received: " + data);
         
         try {
             if (data.get("target").equals("game")) {
@@ -113,14 +130,16 @@ public class Client implements NetworkingDelegate, StreamDelegate {
         }
         
         if (YourDealApplication.currentUI != null) {
-            YourDealApplication.currentUI.updateUI();
+            System.out.println("updating ui from client.streamReceivedData");
+            YourDealApplication.currentUI.updateUI(); // This will run on the correct Thread.
         }
         else {
             System.out.println("WHAT THE HECK");
         }
     }
-    
-    public boolean isUserGiantPurpleMonsterThingyMagigitWhatAmIWritingRightNow() {
-        return false;
+
+    @Override
+    public void lobbyIsClosing() {
+        disconnect();
     }
 }

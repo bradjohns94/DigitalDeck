@@ -43,7 +43,6 @@ public class EuchreUIActivity extends Activity {
 		clicked = null;
 		euchre = (EuchreGame)YourDealApplication.game;
 		localPlayer = YourDealApplication.localPlayer;
-		localPlayer.setUI(this);
 		euchre.start();
 	}
 	

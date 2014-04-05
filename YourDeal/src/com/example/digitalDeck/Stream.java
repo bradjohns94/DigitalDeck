@@ -11,53 +11,47 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+
 public class Stream {
     private Reader reader;
     private Writer writer;
     private Socket socket;
     private StreamDelegate delegate;
     
-    public Stream(Socket aSocket, StreamDelegate aDelegate) { // Use an existing socket
+    private Handler callbackHandler;
+    
+    public Stream(Socket aSocket, StreamDelegate aDelegate, Looper aLooper) {
+        // TODO: If this gets any more complex, the entire Stream should run on its own Thread.
+        
         socket = aSocket;
         delegate = aDelegate;
         reader = new Reader(aSocket);
         writer = new Writer(aSocket);
-        new Thread(reader).start();
-        new Thread(writer).start();
-    }
-    
-    public Stream(final Service aService, StreamDelegate aDelegate) { // Make the socket ourselves
-        delegate = aDelegate;
         
-        new Thread(new Runnable() {
-            public void run() {
-                try {
-                    socket = new Socket(aService.getFirstIP(), aService.getPort());
+        // Build a Handler on the same thread that this Stream was created on, so that
+        // the delegate methods get called on it.
+        callbackHandler = new Handler(aLooper, new Handler.Callback() {
+            public boolean handleMessage(Message msg) {
+                if (msg.what == 0) {
+                    delegate.streamReceivedData(Stream.this, (JSONObject)msg.obj);                            
                 }
-                catch (IOException e) {
-                    e.printStackTrace();
+                else if (msg.what == 1) {
+                    // TODO: Write tags can be handled here if I ever get around to that
                 }
+                
+                return true;
             }
-        }).start();
+        });
         
-        while (socket == null || !socket.isConnected()) {} // TODO aaaaaaaaaaaa
-        
-        reader = new Reader(socket);
-        writer = new Writer(socket);
         new Thread(reader).start();
         new Thread(writer).start();
     }
     
     public void queueWrite(JSONObject data) {
         writer.queueWrite(data);
-    }
-    
-    public Reader getReader() {
-        return reader;
-    }
-    
-    public Writer getWriter() {
-        return writer;
     }
     
     public void stop() {
@@ -100,8 +94,8 @@ public class Stream {
          * forwards the information to the updateUIThread
          */
         public void run() {
-            while (!Thread.currentThread().isInterrupted() && !socket.isClosed()) {
-                try {
+            try {
+                while (!Thread.currentThread().isInterrupted() && !socket.isClosed()) {
                     ByteBuffer buf = ByteBuffer.allocate(9);
                     input.readFully(buf.array(), 0, 9);
                     
@@ -126,14 +120,15 @@ public class Stream {
                     
                     JSONObject payload = new JSONObject(read);
 
-                    delegate.streamReceivedData(Stream.this, payload);
-                    
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    //System.out.println("reader socket closed");
-                }
+                    callbackHandler.obtainMessage(0, payload).sendToTarget();
+                }                    
+            }
+            catch (JSONException e) {
+                e.printStackTrace();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+                System.out.println("reader socket closed");
             }
         }
         
@@ -174,22 +169,27 @@ public class Stream {
         @Override
         public void run() {
             try {
-                JSONObject payload = queue.take(); // Blocks until there is something to take
-                if (payload.equals(DOTA)) return;
-                
-                String payloadString = payload.toString();
-                
-                // Build the header:
-                ByteBuffer buf = ByteBuffer.allocate(9);
-                buf.putInt(0x444c4447);
-                buf.put((byte)0x0f);
-                buf.putInt(payloadString.length());
-                
-                // Now write them to the socket in order:
-                output.write(buf.array(), 0, 9);
-                output.writeBytes(payload.toString());
+                while (!Thread.currentThread().isInterrupted() && !socket.isClosed()) {
+                    JSONObject payload = queue.take(); // Blocks until there is something to take
+                    if (payload.equals(DOTA)) return;
+                    
+                    String payloadString = payload.toString();
+                    System.out.println("writing " + payloadString);
+                    
+                    // Build the header:
+                    ByteBuffer buf = ByteBuffer.allocate(9);
+                    buf.putInt(0x444c4447);
+                    buf.put((byte)0x0f);
+                    buf.putInt(payloadString.length());
+                    
+                    // Now write them to the socket in order:
+                    output.write(buf.array(), 0, 9);
+                    output.writeBytes(payloadString);
+                    System.out.println("wrote " + payloadString);
+                }
             }
             catch (InterruptedException e) {
+                System.out.println("shit broke");
                 e.printStackTrace();
             }
             catch (IOException e) {
@@ -200,6 +200,7 @@ public class Stream {
         public void queueWrite(JSONObject payload) {
             try {
                 queue.put(payload);
+                System.out.println("hey queued write");
             }
             catch (InterruptedException e) {
                 e.printStackTrace();

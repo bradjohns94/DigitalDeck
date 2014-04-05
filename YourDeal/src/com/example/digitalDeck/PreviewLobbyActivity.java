@@ -21,19 +21,22 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 
 		// Show the Up button in the action bar.
 		setupActionBar();
+		YourDealApplication.currentUI = this; // Immediately take control of the app, in case anything changes
 		
 		Service service = YourDealApplication.selectedService;
 		
+		System.out.println("creating game");
 		RemoteGame newGame = new RemoteGame(service.getGameSize(), service.getTitle(), service.getType());
+		System.out.println("creating client");
 		client = new Client(newGame, service);
 		YourDealApplication.networkingDelegate = client;
 		YourDealApplication.game = newGame;
-		YourDealApplication.currentUI = this;
 		
 		newGame.setNetworkingDelegate(client);
+		System.out.println("connecting to server");
 		client.connect();
 		
-		drawPlayers();
+		//drawPlayers();
 	}
 
 	/**
@@ -105,6 +108,11 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 
     @Override
     public void updateUI() {
-        drawPlayers();
+        // Make sure that UI updates happen on the main Thread.
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                drawPlayers();
+            }
+        });
     }
 }

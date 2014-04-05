@@ -32,6 +32,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
     private ArrayList<Service> services;
     android.net.wifi.WifiManager.MulticastLock lock;
     JmDNS jmdns;
+    ServiceListener listener;
     
     /**onCreate
      * Set the title of the activity and display the activity
@@ -70,7 +71,11 @@ public class FindGameActivity extends Activity implements OnClickListener {
                     System.out.println("created jmdns");
                     addServices(jmdns.list("_DigitalDeck._tcp.local."));
                     System.out.println("listed existing services");
-                    jmdns.addServiceListener("_DigitalDeck._tcp.local.", new FindGameListener());
+                    
+                    if (listener == null) {
+                        listener = new FindGameListener();
+                    }
+                    jmdns.addServiceListener("_DigitalDeck._tcp.local.", listener);
                     System.out.println("listener registered");
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -81,11 +86,14 @@ public class FindGameActivity extends Activity implements OnClickListener {
 	
 	private void stopListening() {
 	    if (lock == null || !lock.isHeld()) return;
+	    System.out.println("stop of listen");
 	    
         new Thread(new Runnable() {
             public void run() {
-                if (jmdns != null) {
-                    jmdns.unregisterAllServices();
+                if (jmdns != null && listener != null) {
+                    // TODO: If we make it here before JmDNS has been registered, it will get registered
+                    System.out.println("unregistering");
+                    jmdns.removeServiceListener("_DigitalDeck._tcp.local.", listener);
                 }
                 
                 if (lock.isHeld()) {
@@ -124,6 +132,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
             public void run() {
                 if (jmdns != null) {
                     try {
+                        listener = null;
                         jmdns.close();
                     }
                     catch (IOException e) {
@@ -146,7 +155,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
     private void drawGames() {
         TableLayout table = (TableLayout)findViewById(R.id.currentPlayers);
         table.setColumnStretchable(1, true);
-        LayoutParams tableParams = new TableRow.LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT, 1);
+        LayoutParams tableParams = new TableRow.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1);
 
         for (Service service : services) {
             System.out.println("drawing service: " + service);
@@ -160,7 +169,14 @@ public class FindGameActivity extends Activity implements OnClickListener {
             row.addView(title);
 
             //Text view for the current number of players
-            String statusText = service.getNumPlayers() + "/" + /*games.get(i).getSize()*/4 + " Players";
+            String statusText = null;
+            if (service.getGameSize() > 0) {
+                statusText = service.getNumPlayers() + "/" + service.getGameSize() + " Players";
+            }
+            else {
+                statusText = service.getNumPlayers() + " Players";
+            }
+            
             TextView status = new TextView(this);
             status.setText(statusText);
             status.setTextAppearance(this, android.R.style.TextAppearance_Large);
@@ -174,7 +190,7 @@ public class FindGameActivity extends Activity implements OnClickListener {
             table.addView(row);
 
             View line = new View(this);
-            line.setLayoutParams(new TableRow.LayoutParams(LayoutParams.FILL_PARENT, 1));
+            line.setLayoutParams(new TableRow.LayoutParams(LayoutParams.MATCH_PARENT, 1));
             line.setBackgroundColor(Color.parseColor("#808080"));
             table.addView(line);
         }
@@ -201,23 +217,20 @@ public class FindGameActivity extends Activity implements OnClickListener {
     
     private void addService(ServiceInfo info) {
     	ServiceInfo[] infos = { info };
-    	System.out.println("adding service");
     	this.addServices(infos);
     }
     
     private void addServices(ServiceInfo[] someInfos) {
     	for (ServiceInfo info : someInfos) {
-    	    System.out.println(info);
+    	    System.out.println("adding service " + info);
     		String title = info.getName();
             String gameType = info.getPropertyString("gameType");
-            // TODO
             int gameSize = Integer.parseInt(info.getPropertyString("gameSize"));
             int playerCount = Integer.parseInt(info.getPropertyString("playerCount"));
             Inet4Address[] addresses = info.getInet4Addresses();
             int port = info.getPort();
             
             Service game = new Service(title, gameType, gameSize, playerCount, addresses, port);
-            System.out.println(game);
             services.add(game);
     	}
     	
@@ -237,12 +250,13 @@ public class FindGameActivity extends Activity implements OnClickListener {
         public void serviceRemoved(ServiceEvent event) {
             ServiceInfo info = event.getInfo();
             String title = info.getName();
-            for (Service g : services) {
-                if (g.getTitle().equals(title)) {
-                    services.remove(g);
+            for (Service service : services) {
+                if (service.getTitle().equals(title)) {
+                    services.remove(service);
                     break;
                 }
             }
+            
             runOnUiThread(new Runnable() {
                 public void run() {
                     drawGames();
@@ -251,13 +265,13 @@ public class FindGameActivity extends Activity implements OnClickListener {
         }
         
         public void serviceResolved(ServiceEvent event) {
-            //TODO create list item
             ServiceInfo info = event.getInfo();
             System.out.println("resolved");
             addService(info);
         }
     }
     
+    /******************* Boring stuff *************************************************************/
 
     /** * Set up the {@link android.app.ActionBar}.  */
     private void setupActionBar() {

@@ -34,8 +34,6 @@ import javax.jmdns.*;
  * employers who may be reading this.
  */
 public class LobbyActivity extends Activity implements UIDelegate {
-    Handler updateConversationHandler;
-
     /**onCreate
      * @param savedInstanceState used for super.onCreate()
      * Initializes the screen as well as initializes the client
@@ -48,19 +46,17 @@ public class LobbyActivity extends Activity implements UIDelegate {
 		setContentView(R.layout.activity_lobby);
 		
 		YourDealApplication.currentUI = this;
-		
-        updateConversationHandler = new Handler();
 
         if (YourDealApplication.networkingDelegate.isHostingGame()) {
-            //Make the start button visible to the host
+            // Make the start button visible to the host
             Button start = (Button)findViewById(R.id.start);
             start.setVisibility(View.VISIBLE);
         }
         
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Player newPlayer = new Player(prefs.getString("display_name", "The Man in the Tan Jacket"));
-        YourDealApplication.game.addPlayer(newPlayer);
         YourDealApplication.localPlayer = newPlayer;
+        YourDealApplication.game.addPlayer(newPlayer);
         
         drawPlayers();
 
@@ -83,9 +79,8 @@ public class LobbyActivity extends Activity implements UIDelegate {
      */
     @Override
 	protected void onStop() {
+        YourDealApplication.networkingDelegate.lobbyIsClosing();
     	super.onStop();
-    	//TODO shut down JmDNS
-    	//TODO close sockets
     }
 
 	/**
@@ -178,6 +173,11 @@ public class LobbyActivity extends Activity implements UIDelegate {
     
     @Override
     public void updateUI() {
-        drawPlayers();
+        // Make sure that UI updates happen on the main Thread.
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                drawPlayers();
+            }
+        });
     }
 }
