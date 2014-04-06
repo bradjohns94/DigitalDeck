@@ -41,6 +41,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		setContentView(R.layout.activity_euchre_ui);
 		
 		YourDealApplication.currentUI = this;
+		System.out.println("Oh hai, I'm changing");
 		
 		clickable = new ArrayList<ImageView>();
 		clicked = null;

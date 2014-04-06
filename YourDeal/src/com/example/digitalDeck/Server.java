@@ -36,6 +36,8 @@ public class Server implements NetworkingDelegate, StreamDelegate {
     private ServiceInfo broadcastService;
     private HashMap<String, String> broadcastProperties;
     private boolean broadcasting;
+    
+    private int readyCount;
 	
     /**Server constructor
      * @param newGame the game that the server is hosting
@@ -47,6 +49,7 @@ public class Server implements NetworkingDelegate, StreamDelegate {
         streamsByPlayer = new HashMap<RemotePlayer, Stream>();
         pendingStreams = new ArrayList<Stream>();
         serverListener = new ServerListener(0);
+        readyCount = 0;
         game = newGame;
     }
     
@@ -238,6 +241,11 @@ public class Server implements NetworkingDelegate, StreamDelegate {
                             }
                         }
                     }
+                } else if (event.equals("readyToPlay")) {
+                	readyCount++;
+                	if (readyCount == game.getGameSize()) {
+                		YourDealApplication.game.start();
+                	}
                 }
             }
             

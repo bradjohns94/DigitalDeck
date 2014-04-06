@@ -171,6 +171,12 @@ public class Client implements NetworkingDelegate, StreamDelegate {
 
     @Override
     public void gameIsStarting() {
-        // Nothing much
+        JSONObject signal = new JSONObject();
+        try {
+        	signal.put("event", "readyToPlay");
+        } catch (JSONException e) {
+        	e.printStackTrace();
+        }
+        stream.queueWrite(signal);
     }
 }
