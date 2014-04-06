@@ -4,14 +4,17 @@ import org.json.JSONObject;
 
 import android.os.Bundle;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.support.v4.app.NavUtils;
 import android.view.*;
 import android.widget.*;
 import android.view.ViewGroup.LayoutParams;
 import android.graphics.Color;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 
-public class PreviewLobbyActivity extends Activity implements UIDelegate {
+public class PreviewLobbyActivity extends Activity implements UIDelegate, OnClickListener {
     Client client;
     
 	@Override
@@ -21,6 +24,7 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 
 		// Show the Up button in the action bar.
 		setupActionBar();
+		this.setTitle("Connecting to game...");
 		YourDealApplication.currentUI = this; // Immediately take control of the app, in case anything changes
 		
 		Service service = YourDealApplication.selectedService;
@@ -35,8 +39,6 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 		newGame.setNetworkingDelegate(client);
 		System.out.println("connecting to server");
 		client.connect();
-		
-		//drawPlayers();
 	}
 
 	/**
@@ -44,7 +46,6 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 	 */
 	private void setupActionBar() {
 		getActionBar().setDisplayHomeAsUpEnabled(true);
-
 	}
 
 	@Override
@@ -65,6 +66,7 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 			//
 			// http://developer.android.com/design/patterns/navigation.html#up-vs-back
 			//
+		    YourDealApplication.networkingDelegate.lobbyIsClosing();
 			NavUtils.navigateUpFromSameTask(this);
 			return true;
         case R.id.action_settings:
@@ -78,7 +80,7 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 	public void drawPlayers() {
         TableLayout table = (TableLayout)findViewById(R.id.currentPlayers);
         table.removeAllViews(); //Clear all previous views upon refresh
-        LayoutParams tableParams = new LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.WRAP_CONTENT);
+        LayoutParams tableParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
 
         //Create and add new rows with player info
         for (Player aPlayer : YourDealApplication.game.getPlayers()) {
@@ -95,7 +97,7 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
 
             //Draw a line beneath the text
             View line = new View(this);
-            line.setLayoutParams(new TableRow.LayoutParams(LayoutParams.FILL_PARENT, 1));
+            line.setLayoutParams(new TableRow.LayoutParams(LayoutParams.MATCH_PARENT, 1));
             line.setBackgroundColor(Color.parseColor("#808080"));
         }
         setTitle(YourDealApplication.game.getTitle());
@@ -114,5 +116,40 @@ public class PreviewLobbyActivity extends Activity implements UIDelegate {
                 drawPlayers();
             }
         });
+    }
+
+    @Override
+    public void lobbyIsClosing() {
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(PreviewLobbyActivity.this);
+                dialogBuilder.setCancelable(false);
+                dialogBuilder.setMessage("The host has cancelled this game.");
+                dialogBuilder.setNeutralButton("Find another game", PreviewLobbyActivity.this);
+                dialogBuilder.show();
+            }
+        });
+    }
+
+    @Override
+    public void gameIsStarting() {
+        this.runOnUiThread(new Runnable() {
+            public void run() {
+                AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(PreviewLobbyActivity.this);
+                dialogBuilder.setCancelable(false);
+                dialogBuilder.setMessage("The host has cancelled this game.");
+                dialogBuilder.setNeutralButton("Find another game", PreviewLobbyActivity.this);
+                dialogBuilder.show();
+            }
+        });
+    }
+
+    @Override
+    public void onClick(DialogInterface dialog, int which) {
+        Intent toFindGame = new Intent(this, FindGameActivity.class);
+        
+        YourDealApplication.game = null;
+        
+        startActivity(toFindGame);
     }
 }

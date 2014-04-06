@@ -8,6 +8,7 @@ package com.example.digitalDeck;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
 
 import org.json.JSONObject;
 
@@ -38,6 +39,7 @@ public abstract class Game {
     public abstract void start();
     
     public abstract void process(JSONObject info);
+    public abstract Hashtable<String, Object> getUIInfo(Player aPlayer);
 
     /**addPlayer
      * if the game is not full adds a player to the game and

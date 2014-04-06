@@ -121,20 +121,19 @@ public class Stream {
                     JSONObject payload = new JSONObject(read);
 
                     callbackHandler.obtainMessage(0, payload).sendToTarget();
-                }                    
+                }
             }
             catch (JSONException e) {
                 e.printStackTrace();
             }
             catch (IOException e) {
-                e.printStackTrace();
-                System.out.println("reader socket closed");
+                // Closed socket to stop loop
             }
         }
         
         public void stop() {
             try {
-                socket.close();
+                input.close();
             }
             catch (IOException e) {
                 e.printStackTrace();

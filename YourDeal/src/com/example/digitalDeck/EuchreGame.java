@@ -50,8 +50,9 @@ public class EuchreGame extends Game {
     }
     
     public void start() {
+        System.out.println("maybe starting game");
         if (players.size() != 4) return;
-        
+        System.out.println("actually starting game");
         this.process(new JSONObject());
     }
 
@@ -594,12 +595,18 @@ public class EuchreGame extends Game {
     public void process(JSONObject info) {
     	System.out.println("processing state " + state);
         if (state % 2 == 1) {
-            if (state < 10) requestSignal();
+            if (state < 10) {
+                requestSignal();
+            }
+            
+            return;
         }
         
         String key = null;
         try {
-            key = info.get("action").toString();
+            if (info.has("action")) {
+                key = info.get("action").toString();
+            }
             switch (state) {
             case 0:
                 startRound();
@@ -632,14 +639,21 @@ public class EuchreGame extends Game {
         }
     }
     
-    public Hashtable<String, Object> getUIInfo(String displayName) {
+    public Hashtable<String, Object> getUIInfo(Player aPlayer) {
     	Hashtable<String, Object> props = new Hashtable<String, Object>();
-    	Player player = this.getPlayerNamed(displayName);
-    	int playerIndex = players.indexOf(player);
+    	
+    	// TODO: This should just be data stored on the Player
+    	int playerIndex = players.indexOf(aPlayer);
+    	int partnerIndex = (playerIndex + 2) % 4;
+        String partnerName = players.get(partnerIndex).get("name").toString();
+        
     	props.put("index", playerIndex);
+    	props.put("partner", partnerName);
+    	
     	props.put("scores", scores);
     	props.put("tricksTaken", tricksTaken);
     	props.put("trick", trick);
+    	
     	if (state < 5) {
     		props.put("topCard", topCard);
     	}
@@ -649,10 +663,5 @@ public class EuchreGame extends Game {
     		props.put("trump", "none");
     	}
     	return props;
-    }
-    
-    public String getPartner(int playerIndex) {
-    	int partnerIndex = (playerIndex + 2) % 4;
-    	return players.get(partnerIndex).get("name").toString();
     }
 }

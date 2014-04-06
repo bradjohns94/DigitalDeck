@@ -32,7 +32,6 @@ public class Server implements NetworkingDelegate, StreamDelegate {
     private Game game;
     private Looper serverLooper;
     
-    private android.net.wifi.WifiManager.MulticastLock lock;
     private JmDNS jmdns;
     private ServiceInfo broadcastService;
     private HashMap<String, String> broadcastProperties;
@@ -80,8 +79,9 @@ public class Server implements NetworkingDelegate, StreamDelegate {
 	 */
     public void createService() {
         try {
-            jmdns = JmDNS.create();
-            updateProperties();
+            if (jmdns == null) {
+                jmdns = JmDNS.create();
+            }
             
             if (broadcastService == null) {
                 broadcastService = ServiceInfo.create("_DigitalDeck._tcp.local.", 
@@ -91,7 +91,7 @@ public class Server implements NetworkingDelegate, StreamDelegate {
                                                       0, 
                                                       broadcastProperties);
             }
-            
+            updateProperties();
             jmdns.registerService(broadcastService); // Broadcast!
             broadcasting = true;
         }
@@ -114,6 +114,7 @@ public class Server implements NetworkingDelegate, StreamDelegate {
         broadcastProperties.put("playerCount", Integer.toString(game.getNumPlayers()));
         
         if (broadcastService != null) { // This is a hack
+            System.out.println("rebroadcasting");
             broadcastService.setText(broadcastProperties);
         }
     }
@@ -122,35 +123,29 @@ public class Server implements NetworkingDelegate, StreamDelegate {
         System.out.println("unregistering service " + broadcastService);
     	jmdns.unregisterService(broadcastService);
     	broadcasting = false;
-    	//lock.release();
     }
 
     public void addedPlayer(Player aPlayer) {
         JSONObject updates = new JSONObject();
         try {
             updates.put("target", "game");
-            updates.put("addedPlayer", aPlayer.get("name"));
+            updates.put("addPlayer", aPlayer.get("name"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
         
         if (broadcasting) {
-            System.out.println("updating properties after adding player");
             updateProperties();
         }
         
-        for (Player player : streamsByPlayer.keySet()) {
-            Stream stream = streamsByPlayer.get(player);
-            System.out.println("server is queuing write to " + player.get("name"));
-            stream.queueWrite(updates);
-        }
+        sendToAllStreams(updates);
     }
     
     public void removedPlayer(Player aPlayer) {
         JSONObject updates = new JSONObject();
         try {
             updates.put("target", "game");
-            updates.put("removedPlayer", aPlayer.get("name"));
+            updates.put("removePlayer", aPlayer.get("name"));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -159,9 +154,7 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             updateProperties();
         }
         
-        for (Stream stream : streamsByPlayer.values()) {
-            stream.queueWrite(updates);
-        }
+        sendToAllStreams(updates);
     }
 
     /**updateProperties
@@ -226,6 +219,28 @@ public class Server implements NetworkingDelegate, StreamDelegate {
                 }
             }
             
+            if (data.has("event")) {
+                String event = (String)data.get("event");
+                
+                // TODO: This is kind of horrible
+                if (event.equals("leaving")) {
+                    aStream.stop();
+                    
+                    if (pendingStreams.contains(aStream)) {
+                        pendingStreams.remove(aStream);
+                    }
+                    else {
+                        for (Player player : streamsByPlayer.keySet()) {
+                            if (streamsByPlayer.get(player).equals(aStream)) {
+                                streamsByPlayer.remove(player);
+                                game.removePlayer(player);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
             if (data.has("addPlayer")) {
                 String name = (String)data.get("addPlayer");
                 RemotePlayer newPlayer = new RemotePlayer(name, this);
@@ -237,6 +252,7 @@ public class Server implements NetworkingDelegate, StreamDelegate {
             if (data.has("removePlayer")) {
                 Player player = game.getPlayerNamed(data.getString("removePlayer"));
                 game.removePlayer(player);
+                streamsByPlayer.remove(player);
             }
             
             if (data.has("action")) {
@@ -254,7 +270,42 @@ public class Server implements NetworkingDelegate, StreamDelegate {
     
     @Override
     public void lobbyIsClosing() {
+        try {
+            JSONObject event = new JSONObject();
+            event.put("target", "client");
+            event.put("event", "lobbyIsClosing");
+            
+            sendToAllStreams(event);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+        
         stop();
+    }
+    
+    @Override
+    public void gameIsStarting() {
+        try {
+            JSONObject event = new JSONObject();
+            event.put("target", "client");
+            event.put("event", "gameIsStarting");
+            
+            sendToAllStreams(event);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    private void sendToAllStreams(JSONObject data) {
+        for (Stream stream : streamsByPlayer.values()) {
+            stream.queueWrite(data);
+        }
+        
+        for (Stream stream : pendingStreams) { // Also push updates to preview lobbies
+            stream.queueWrite(data);
+        }
     }
     
     /******************************************************************************************************************/

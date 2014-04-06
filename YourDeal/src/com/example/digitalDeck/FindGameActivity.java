@@ -11,28 +11,37 @@
 package com.example.digitalDeck;
 
 import android.app.Activity;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
+import android.text.format.Formatter;
 import android.view.*;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.content.Intent;
+import android.database.DataSetObserver;
 import android.widget.*;
 import android.graphics.Color;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 
 import javax.jmdns.*;
 
 public class FindGameActivity extends Activity implements OnClickListener {
+    // TODO: Rebuild this to use a ListView and ListAdapter instead of building the table manually.
 
     private ArrayList<TableRow> gameRows;
     private ArrayList<Service> services;
-    android.net.wifi.WifiManager.MulticastLock lock;
-    JmDNS jmdns;
-    ServiceListener listener;
+    private android.net.wifi.WifiManager.MulticastLock lock;
+    private JmDNS jmdns;
+    private ServiceListener listener;
     
     /**onCreate
      * Set the title of the activity and display the activity
@@ -58,16 +67,19 @@ public class FindGameActivity extends Activity implements OnClickListener {
 	    
 	    new Thread(new Runnable() {
             public void run() {
+                WifiManager wifi = (WifiManager)getSystemService(WIFI_SERVICE);
+                
                 try {
                     if (lock == null) {
-                        android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager)YourDealApplication.getInstance().getSystemService(android.content.Context.WIFI_SERVICE);
                         lock = wifi.createMulticastLock("DefinitelyCats");
                         lock.setReferenceCounted(true);
                     }
                     lock.acquire(); // Lock multicast open
                     
                     System.out.println("preparing to listen");
-                    jmdns = JmDNS.create();
+                    // Plain JmDNS.create() apparently does not work properly on all newer devices. Providing an address:
+                    String ip = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
+                    jmdns = JmDNS.create(InetAddress.getByName(ip));
                     System.out.println("created jmdns");
                     addServices(jmdns.list("_DigitalDeck._tcp.local."));
                     System.out.println("listed existing services");
@@ -154,21 +166,22 @@ public class FindGameActivity extends Activity implements OnClickListener {
 
     private void drawGames() {
         TableLayout table = (TableLayout)findViewById(R.id.currentPlayers);
+        table.removeAllViews(); // Clean out existing services
+        gameRows.clear(); // TODO: This needs to not exist
         table.setColumnStretchable(1, true);
         LayoutParams tableParams = new TableRow.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1);
 
         for (Service service : services) {
-            System.out.println("drawing service: " + service);
             TableRow row = new TableRow(this);
             row.setLayoutParams(tableParams);
-            //Text view for the game title
+            // Text view for the game title
             TextView title = new TextView(this);
             title.setText(service.getTitle());
             title.setTextAppearance(this, android.R.style.TextAppearance_Large);
             title.setPadding(0,0,0,10);
             row.addView(title);
 
-            //Text view for the current number of players
+            // Text view for the current number of players
             String statusText = null;
             if (service.getGameSize() > 0) {
                 statusText = service.getNumPlayers() + "/" + service.getGameSize() + " Players";
@@ -221,8 +234,22 @@ public class FindGameActivity extends Activity implements OnClickListener {
     }
     
     private void addServices(ServiceInfo[] someInfos) {
+        WifiManager wifi = (WifiManager)getSystemService(WIFI_SERVICE);
+        String localIP = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
+        
     	for (ServiceInfo info : someInfos) {
-    	    System.out.println("adding service " + info);
+    	    // Don't list our own services, and don't list dead services (usually also our own).
+            // TODO: There's probably a much better way to handle this. Shouldn't be IPv4 dependent, shouldn't only check first address.
+            if (info.getInet4Addresses().length < 1 || info.getInet4Addresses()[0].toString().endsWith(localIP)) continue;
+            
+            // Remove old versions of the service
+            for (Service service : services) {
+                if (service.getTitle().equals(info.getName())) {
+                    services.remove(service);
+                    break;
+                }
+            }
+    	    
     		String title = info.getName();
             String gameType = info.getPropertyString("gameType");
             int gameSize = Integer.parseInt(info.getPropertyString("gameSize"));
@@ -230,8 +257,10 @@ public class FindGameActivity extends Activity implements OnClickListener {
             Inet4Address[] addresses = info.getInet4Addresses();
             int port = info.getPort();
             
-            Service game = new Service(title, gameType, gameSize, playerCount, addresses, port);
-            services.add(game);
+            Service newService = new Service(title, gameType, gameSize, playerCount, addresses, port);
+            System.out.println(info);
+            System.out.println(newService);
+            services.add(newService);
     	}
     	
         runOnUiThread(new Runnable() {
@@ -242,16 +271,11 @@ public class FindGameActivity extends Activity implements OnClickListener {
     }
     
     private class FindGameListener implements ServiceListener {
-        public void serviceAdded(ServiceEvent event) {
-            //This does nothing
-            System.out.println("Oh hai, I added a service");
-        }
+        public void serviceAdded(ServiceEvent event) {}
         
         public void serviceRemoved(ServiceEvent event) {
-            ServiceInfo info = event.getInfo();
-            String title = info.getName();
             for (Service service : services) {
-                if (service.getTitle().equals(title)) {
+                if (service.getTitle().equals(event.getInfo().getName())) {
                     services.remove(service);
                     break;
                 }
@@ -266,8 +290,8 @@ public class FindGameActivity extends Activity implements OnClickListener {
         
         public void serviceResolved(ServiceEvent event) {
             ServiceInfo info = event.getInfo();
-            System.out.println("resolved");
-            addService(info);
+            //addService(info);
+            addServices(jmdns.list("_digitaldeck._tcp.local.")); // Re-list all services when a new one is discovered
         }
     }
     

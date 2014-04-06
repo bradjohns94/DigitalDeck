@@ -20,6 +20,7 @@ public interface NetworkingDelegate {
      * Called by the lobby when the user has decided to leave.
      */
     public void lobbyIsClosing();
+    public void gameIsStarting();
     
     /* Both the Server and Client implement all of these methods.
      * On the Server, they are called by the Game and by RemotePlayers to forward info to Clients.

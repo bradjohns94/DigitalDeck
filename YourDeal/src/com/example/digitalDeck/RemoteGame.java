@@ -1,9 +1,12 @@
 package com.example.digitalDeck;
 
+import java.util.Hashtable;
+
 import org.json.JSONObject;
 
 public class RemoteGame extends Game {
-	protected String type;
+	private String type;
+	private Hashtable<String, Object> uiInfo;
 
 	/**RemoteGame
 	 * @param aSize: The size of the game
@@ -28,5 +31,21 @@ public class RemoteGame extends Game {
     @Override
     public void start() {
         
+    }
+
+    @Override
+    public Hashtable<String, Object> getUIInfo(Player aPlayer) {
+        Hashtable<String, Object> props = new Hashtable<String, Object>();
+        props.putAll(uiInfo);
+        
+        // TODO: This should just be data stored on the Player
+        int playerIndex = players.indexOf(aPlayer);
+        int partnerIndex = (playerIndex + 2) % 4;
+        String partnerName = players.get(partnerIndex).get("name").toString();
+        
+        props.put("index", playerIndex);
+        props.put("partner", partnerName);
+        
+        return null;
     }
 }

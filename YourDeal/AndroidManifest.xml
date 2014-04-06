@@ -62,7 +62,7 @@
             android:label="@string/title_activity_create_game"
             android:screenOrientation="portrait"
             android:parentActivityName="com.example.digitalDeck.FindGameActivity"
-            android:windowSoftInputMode="stateHidden" >
+            android:windowSoftInputMode="stateVisible" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.yourdeal.FindGameActivity" />

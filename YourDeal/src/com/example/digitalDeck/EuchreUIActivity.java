@@ -22,9 +22,9 @@ import android.view.*;
  * and the player who is displaying the UI's partner.
  */
 
-public class EuchreUIActivity extends Activity {
+public class EuchreUIActivity extends Activity implements UIDelegate {
 	private Player localPlayer;
-	private EuchreGame euchre;
+	private Game game;
 	private String partner;
 	private ArrayList<ImageView> clickable;
 	private ImageView clicked;
@@ -39,11 +39,14 @@ public class EuchreUIActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_euchre_ui);
+		
+		YourDealApplication.currentUI = this;
+		
 		clickable = new ArrayList<ImageView>();
 		clicked = null;
-		euchre = (EuchreGame)YourDealApplication.game;
+		game = YourDealApplication.game;
 		localPlayer = YourDealApplication.localPlayer;
-		euchre.start();
+		game.start();
 	}
 	
 	/**updateUI
@@ -56,14 +59,14 @@ public class EuchreUIActivity extends Activity {
 	 * 5. TrickCount information, show how many tricks the local players team has won and lost
 	 * 6. Score show the current score for both teams in the game
 	 */
-	public void updateUI() {
+	public void drawGame() {
 		System.out.println("Updating UI");
 		String[] hand = (String[])localPlayer.get("hand");
-		Hashtable<String, Object> UIProps = euchre.getUIInfo(localPlayer.get("name").toString());
+		Hashtable<String, Object> UIProps = game.getUIInfo(localPlayer);
 		int index = (Integer)UIProps.get("index");
 		int teamIndex = index % 2;
 		if (partner == null) {
-			partner = euchre.getPartner(index);
+			partner = (String)UIProps.get("partner");
 			TextView partnerText = (TextView)findViewById(R.id.partner);
 			partnerText.setText("Partner: " + partner);
 		}
@@ -243,7 +246,7 @@ public class EuchreUIActivity extends Activity {
             if (key == null) return;
             clickable = new ArrayList<ImageView>();
             if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
-            	String card = euchre.getUIInfo(localPlayer.get("name").toString()).get("topCard").toString();
+            	String card = (String)game.getUIInfo(localPlayer).get("topCard");
             	String[] options = {"Pick it up", "Pass"};
             	String message = getSuit(card) + "was turned up";
             	drawBooleanDialog(options, message, "Your Turn");
@@ -285,7 +288,7 @@ public class EuchreUIActivity extends Activity {
             				JSONObject response = new JSONObject();
             				response.put("action", "response");
             				response.put("response", handler.getSelected());
-            				euchre.process(response);
+            				game.process(response);
             			} catch (JSONException e) {
             				e.printStackTrace();
             			}
@@ -298,7 +301,7 @@ public class EuchreUIActivity extends Activity {
             				JSONObject response = new JSONObject();
             				response.put("action", "response");
             				response.put("response", "pass");
-            				euchre.process(response);
+            				game.process(response);
             			} catch (JSONException e) {
             				e.printStackTrace();
             			}
@@ -329,7 +332,7 @@ public class EuchreUIActivity extends Activity {
 		if (!(pressed instanceof ImageView)) return;
 		ImageView image = (ImageView)pressed;
 		if (clickable.contains(image)) {
-			if (clicked == null || !image.equals(clicked)) { //If the card has not recieved its first click
+			if (clicked == null || !image.equals(clicked)) { //If the card has not received its first click
 				clicked = image;
 				image.setPadding(0, 0, 0, 5);
 			} else { //Second click for confirmation
@@ -340,7 +343,7 @@ public class EuchreUIActivity extends Activity {
 					JSONObject response = new JSONObject();
 					response.put("action", "response");
 					response.put("response", play);
-					euchre.process(response);
+					game.process(response);
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
@@ -368,7 +371,7 @@ public class EuchreUIActivity extends Activity {
         		try {
         			response.put("action", "response");
         			response.put("response", "call");
-        			euchre.process(response);
+        			game.process(response);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -381,7 +384,7 @@ public class EuchreUIActivity extends Activity {
         		try {
         			response.put("action", "response");
         			response.put("response", "pass");
-        			euchre.process(response);
+        			game.process(response);
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -447,4 +450,23 @@ public class EuchreUIActivity extends Activity {
 			return selected;
 		}
 	}
+
+    @Override
+    public void lobbyIsClosing() {
+        // TODO: Use this for quitting the game
+    }
+
+    @Override
+    public void gameIsStarting() {
+        // Probably not useful
+    }
+
+    @Override
+    public void updateUI() {
+        runOnUiThread(new Runnable() {
+            public void run() {
+                drawGame();
+            }
+        });
+    }
 }

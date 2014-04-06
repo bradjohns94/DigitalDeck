@@ -7,17 +7,11 @@
 
 package com.example.digitalDeck;
 
-import java.io.IOException;
-import java.util.HashMap;
-
-import android.net.nsd.NsdManager;
-import android.net.nsd.NsdServiceInfo;
 import android.os.Bundle;
 import android.app.Activity;
 import android.support.v4.app.NavUtils;
 import android.view.*;
 import android.content.*;
-import android.preference.PreferenceManager;
 import android.widget.*;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.InputMethodManager;
@@ -25,8 +19,6 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.widget.RadioGroup.OnCheckedChangeListener; 
 import android.graphics.Color;
-
-import javax.jmdns.*;
 
 public class CreateGameActivity extends Activity implements OnClickListener, OnCheckedChangeListener {
 
@@ -57,9 +49,7 @@ public class CreateGameActivity extends Activity implements OnClickListener, OnC
 	 * Set up the {@link android.app.ActionBar}.
 	 */
 	private void setupActionBar() {
-
 		getActionBar().setDisplayHomeAsUpEnabled(true);
-
 	}
 
 	@Override

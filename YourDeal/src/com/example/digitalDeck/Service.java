@@ -47,4 +47,8 @@ public class Service {
 	public int getPort() {
 		return port;
 	}
+	
+	public String toString() {
+	    return "Service { type: " + type + ", ip: " + getFirstIP() + ", port: " + port + ", title: " + title + ", playerCount: " + players + ", gameSize: " + gameSize + " }";
+	}
 }

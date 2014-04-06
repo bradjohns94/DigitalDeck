@@ -6,8 +6,10 @@ import java.net.Socket;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.renderscript.Int2;
 
 public class Client implements NetworkingDelegate, StreamDelegate {
 	private RemoteGame game;
@@ -46,7 +48,16 @@ public class Client implements NetworkingDelegate, StreamDelegate {
 	}
 	
 	public void disconnect() {
-	    stream.stop();
+	    try {
+            JSONObject data = new JSONObject();
+            data.put("event", "leaving");
+            stream.queueWrite(data);
+        }
+        catch (JSONException e) {
+            e.printStackTrace();
+        }
+	    // TODO: Actually close this stream
+	    //stream.stop();
 	}
 	
 	public RemoteGame getGame() {
@@ -110,7 +121,11 @@ public class Client implements NetworkingDelegate, StreamDelegate {
         try {
             if (data.get("target").equals("game")) {
                 if (data.has("addPlayer")) {
-                    game.addPlayer(new RemotePlayer((String)data.get("addPlayer"), this));
+                    if (YourDealApplication.localPlayer == null || !YourDealApplication.localPlayer.get("name").equals(data.get("addPlayer"))) {
+                        // Only add the player if it isn't us.
+                        // TODO: This is probably a hack
+                        game.addPlayer(new RemotePlayer((String)data.get("addPlayer"), this));
+                    }
                 }
                 
                 if (data.has("removePlayer")) {
@@ -124,6 +139,16 @@ public class Client implements NetworkingDelegate, StreamDelegate {
             else if (data.get("target").equals("player")) {
                 YourDealApplication.localPlayer.updateProperties(data);
             }
+            else if (data.get("target").equals("client")) {
+                // We've received a meta message.
+                if (data.get("event").equals("lobbyIsClosing")) {
+                    lobbyIsClosing();
+                    YourDealApplication.currentUI.lobbyIsClosing();
+                }
+                else if (data.get("event").equals("gameIsStarting")) {
+                    YourDealApplication.currentUI.gameIsStarting();
+                }
+            }
         }
         catch (JSONException e) {
             e.printStackTrace();
@@ -131,6 +156,7 @@ public class Client implements NetworkingDelegate, StreamDelegate {
         
         if (YourDealApplication.currentUI != null) {
             System.out.println("updating ui from client.streamReceivedData");
+            System.out.println("currentUI = " + YourDealApplication.currentUI);
             YourDealApplication.currentUI.updateUI(); // This will run on the correct Thread.
         }
         else {
@@ -141,5 +167,10 @@ public class Client implements NetworkingDelegate, StreamDelegate {
     @Override
     public void lobbyIsClosing() {
         disconnect();
+    }
+
+    @Override
+    public void gameIsStarting() {
+        // Nothing much
     }
 }
