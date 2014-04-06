@@ -47,6 +47,9 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		clicked = null;
 		game = YourDealApplication.game;
 		localPlayer = YourDealApplication.localPlayer;
+		
+		imageByName = new Hashtable<String, ImageView>();
+		nameByImage = new Hashtable<ImageView, String>();
 		game.start();
 	}
 	
