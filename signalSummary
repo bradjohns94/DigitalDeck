@@ -26,3 +26,8 @@ game signals:
 	"scores" : int[]
 	"trump" : String
 	
+Server events
+==================================================
+
+"event" : "leaving"
+        : "readyToPlay"
