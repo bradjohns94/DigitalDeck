@@ -3,8 +3,7 @@ package com.example.digitalDeck;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.json.*;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -65,7 +64,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	 */
 	public void drawGame() {
 		System.out.println("Updating UI");
-		String[] hand = (String[])localPlayer.get("hand");
+		JSONArray hand = (JSONArray)localPlayer.get("hand");
 		Hashtable<String, Object> UIProps = game.getUIInfo(localPlayer);
 		int index = (Integer)UIProps.get("index");
 		int teamIndex = index % 2;
@@ -76,10 +75,16 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		
 		//Draw the players current hand
-		for (int i = 0; i < hand.length; i++) {
-			if (hand[i] != null) {
+		for (int i = 0; i < hand.length(); i++) {
+			String card = null;
+			try {
+				card = hand.getString(i);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			if (card != null) {
 				ImageView toDraw = null;
-				String fileName = hand[i];
+				String fileName = card;
 				if (fileName.charAt(0) == '9') fileName.replace('9', 'n');
 				fileName = fileName.toLowerCase(); //because android naming rules
 				int resID = getResources().getIdentifier(fileName, "drawable", "com.example.digitalDeck");
@@ -108,11 +113,15 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 					toDraw.setPadding(0, 0, 0, 0);
 				}
 				toDraw.setImageResource(resID);
-				imageByName.put(hand[i], toDraw);
-				nameByImage.put(toDraw, hand[i]);
+				try {
+					imageByName.put(hand.getString(i), toDraw);
+					nameByImage.put(toDraw, hand.getString(i));
+				} catch(JSONException e) {
+					e.printStackTrace();
+				}
 			}
 		}
-		for (int i = hand.length; i < 5; i++) {
+		for (int i = hand.length(); i < 5; i++) {
 			ImageView toDisable = null;
 			switch (i) {
 				case 0:
@@ -158,18 +167,33 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		
 		//Draw the current trick
-		String[] trick = (String[])UIProps.get("trick");
+		JSONArray trick = (JSONArray)UIProps.get("trick");
 		int trickPosition = 0;
-		for (int i = 0; i < trick.length; i++) {
-			if (trick[i] != null) trickPosition++;
+		for (int i = 0; i < trick.length(); i++) {
+			try {
+				if (trick.getString(i) != null) trickPosition++;
+			} catch(JSONException e) {
+				e.printStackTrace();
+			}
 		}
 		int start = 4 - trickPosition;
 		ImageView toChange = null;
 		for (int i = 0; i < trickPosition; i++) {
+			if (start == 0) break;
 			int toDraw = start + i;
-			String fileName = trick[i];
+			String fileName = "";
+			try {
+				fileName = trick.getString(i);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
 			if (fileName.charAt(0) == '9') fileName.replace('9', 'n');
 			fileName = fileName.toLowerCase(); //because android naming rules
+			System.out.println("Drawing image with filename: " + fileName);
+			if (fileName == null) { //This shouldn't be possible but its happening...
+				trickPosition--;
+				continue;
+			}
 			int resID = getResources().getIdentifier(fileName, "drawable", "com.example.digitalDeck");
 			switch (toDraw) {
 				case 1:
@@ -181,6 +205,8 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 				case 3:
 					toChange = (ImageView)findViewById(R.id.rightPlayerCard);
 					break;
+				default:
+					System.out.println("Your logic is bad and you should feel bad");
 			}
 			toChange.setImageResource(resID);
 			toChange.setVisibility(View.VISIBLE);
@@ -217,19 +243,26 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		
 		//Draw trickCount information
-		int[] trickCount = (int[])UIProps.get("tricksTaken");
+		JSONArray trickCount = (JSONArray)UIProps.get("tricksTaken");
 		TextView tricksWon = (TextView)findViewById(R.id.tricksWon);
 		TextView tricksLost = (TextView)findViewById(R.id.tricksLost);
-		tricksWon.setText("Tricks Won: " + Integer.toString(trickCount[teamIndex]));
-		tricksLost.setText("Tricks Lost: " + Integer.toString(trickCount[(index + 1) % 2]));
+		try {
+			tricksWon.setText("Tricks Won: " + Integer.toString(trickCount.getInt(teamIndex)));
+			tricksLost.setText("Tricks Lost: " + Integer.toString(trickCount.getInt((index + 1) % 2)));
+		} catch(JSONException e) {
+			e.printStackTrace();
+		}
 		
 		//Draw scoring information
-		int[] scores = (int[])UIProps.get("scores");
+		JSONArray scores = (JSONArray)UIProps.get("scores");
 		TextView scoreFor = (TextView)findViewById(R.id.yourScore);
 		TextView scoreAgainst = (TextView)findViewById(R.id.opponentScore);
-		scoreFor.setText("Your Score: " + Integer.toString(scores[teamIndex]));
-		scoreAgainst.setText("Opponent Score: " + Integer.toString(scores[(index + 1) % 2]));
-		
+		try {
+			scoreFor.setText("Your Score: " + Integer.toString(scores.getInt(teamIndex)));
+			scoreAgainst.setText("Opponent Score: " + Integer.toString(scores.getInt((index + 1) % 2)));
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 		TextView message = (TextView)findViewById(R.id.message);
 		message.setVisibility(View.INVISIBLE);
 	}
@@ -263,9 +296,14 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
             	}
             	displayMessage.setText(message);
             	displayMessage.setVisibility(View.VISIBLE);
-            	String[] plays = (String[])info.get(key);
-            	for (int i = 0; i < plays.length; i++) {
-            		ImageView canClick = imageByName.get(plays[i]);
+            	JSONArray plays = (JSONArray)info.get(key);
+            	for (int i = 0; i < plays.length(); i++) {
+            		ImageView canClick = null;
+	            	try {
+	            		canClick = imageByName.get(plays.get(i));
+	            	} catch (JSONException e) {
+	            		e.printStackTrace();
+	            	}
             		if (canClick != null) clickable.add(canClick);
             	}
             } else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
@@ -275,7 +313,16 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
             	AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
                 dialogBuilder.setMessage("Select Game Type");
                 dialogBuilder.setTitle("Game Settings");
-            	String[] options = (String[])info.get(key);
+            	//String[] options = (String[])info.get(key);
+                JSONArray JSONOptions = (JSONArray)info.get(key);
+                String[] options = new String[JSONOptions.length()];
+                for (int i = 0; i < options.length; i++) {
+                	try {
+                		options[i] = JSONOptions.getString(i);
+                	} catch (JSONException e) {
+                		e.printStackTrace();
+                	}
+                }
             	RadioGroup group = new RadioGroup(this);
             	for (int i = 0; i < options.length; i++) {
             		if (options[i].equals("pass")) continue;

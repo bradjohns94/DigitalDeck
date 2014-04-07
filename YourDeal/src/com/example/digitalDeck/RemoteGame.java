@@ -46,6 +46,6 @@ public class RemoteGame extends Game {
         props.put("index", playerIndex);
         props.put("partner", partnerName);
         
-        return null;
+        return props;
     }
 }

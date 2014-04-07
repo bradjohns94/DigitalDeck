@@ -2,8 +2,7 @@ package com.example.digitalDeck;
 
 import java.util.*;
 
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.json.*;
 
 //TODO: group puts to make more efficient
 public class EuchreGame extends Game {
@@ -79,7 +78,7 @@ public class EuchreGame extends Game {
 				// TODO: There's no reason to store hands here, they should be in the Players.
 				JSONObject playerUpdate = new JSONObject();
 				playerUpdate.put("target", "player");
-			    playerUpdate.put("hand", hands[i]);
+			    playerUpdate.put("hand", new JSONArray(Arrays.asList(hands[i])));
 			    players.get(i).updateProperties(playerUpdate);
 			}
 			
@@ -112,7 +111,7 @@ public class EuchreGame extends Game {
 			    trump = getSuit(topCard);
 			    JSONObject updates = new JSONObject();
 			    updates.put("target", "game");
-			    updates.put("trump", suits[trump]);
+			    updates.put("trump", new JSONArray(Arrays.asList(suits[trump])));
 			    networkingDelegate.updatedGame(updates);
 			    state = 3;
 			} else { // If trump was not called
@@ -178,7 +177,7 @@ public class EuchreGame extends Game {
 			    
 			    JSONObject updates = new JSONObject();
 			    updates.put("target", "game");
-			    updates.put("trump", suits[trump]);
+			    updates.put("trump", new JSONArray(Arrays.asList(suits[trump])));
 			    networkingDelegate.updatedGame(updates);
 			}
 			else {
@@ -228,7 +227,7 @@ public class EuchreGame extends Game {
             
             JSONObject playerUpdate = new JSONObject();
             playerUpdate.put("target", "player");
-            playerUpdate.put("hand", newHand);
+            playerUpdate.put("hand", new JSONArray(Arrays.asList(newHand)));
             players.get(playerTurn).updateProperties(playerUpdate);
             
             //Process lead card
@@ -267,6 +266,8 @@ public class EuchreGame extends Game {
     public void processTrick() {
         if (state != 11) return;
         
+        trickIndex = 0;
+        
         try {
             int winner = findWinner();
             tricksTaken[winner % 2]++;
@@ -281,7 +282,7 @@ public class EuchreGame extends Game {
             
             JSONObject updates = new JSONObject();
             updates.put("target", "game");
-            updates.put("tricks", tricksTaken);
+            updates.put("tricks", new JSONArray(Arrays.asList(tricksTaken)));
             networkingDelegate.updatedGame(updates);
             
             process(new JSONObject());
@@ -323,7 +324,7 @@ public class EuchreGame extends Game {
             
             JSONObject updates = new JSONObject();
             updates.put("target", "game");
-            updates.put("scores", scores);
+            updates.put("scores", new JSONArray(Arrays.asList(scores)));
             networkingDelegate.updatedGame(updates);
             
             process(new JSONObject());
@@ -352,7 +353,7 @@ public class EuchreGame extends Game {
 			        }
 			        cards[5] = topCard;
 			        key = "drop";
-			        dict.put("validCards", cards);
+			        dict.put("validCards", new JSONArray(Arrays.asList(cards)));
 			        break;
 			    case 5:
 			        //Loner request
@@ -383,7 +384,7 @@ public class EuchreGame extends Game {
 			            }
 			        }
 			        key = "play";
-			        dict.put("validCards", playable);
+			        dict.put("validCards", new JSONArray(Arrays.asList(playable)));
 			        break;
 			}
 			dict.put("action", key);
@@ -650,9 +651,9 @@ public class EuchreGame extends Game {
     	props.put("index", playerIndex);
     	props.put("partner", partnerName);
     	
-    	props.put("scores", scores);
-    	props.put("tricksTaken", tricksTaken);
-    	props.put("trick", trick);
+	    props.put("scores", new JSONArray(Arrays.asList(scores)));
+	    props.put("tricksTaken", new JSONArray(Arrays.asList(tricksTaken)));
+	    props.put("trick", new JSONArray(Arrays.asList(trick)));
     	
     	if (state < 5) {
     		props.put("topCard", topCard);
