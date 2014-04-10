@@ -52,6 +52,34 @@ public class EuchreGame extends Game {
         System.out.println("maybe starting game");
         if (players.size() != 4) return;
         System.out.println("actually starting game");
+        //Send pre-game information
+        for (int i = 0; i < super.players.size(); i++) {
+        	Player current = super.players.get(i);
+        	int partnerIndex = i + 2;
+        	if (partnerIndex > 3) partnerIndex -= 4;
+        	Player partner = super.players.get(partnerIndex);
+        	JSONObject update = new JSONObject();
+        	try {
+        		update.put("target", "player");
+        		update.put("partner", partner.get("name"));
+        		update.put("index", i);
+        		update.put("hand", new JSONArray()); //To avoid null pointers.
+        	} catch (JSONException e) {
+        		e.printStackTrace();
+        	}
+        	current.updateProperties(update);
+        }
+        JSONObject gameInfo = new JSONObject();
+        try {
+        	gameInfo.put("target", "game");
+        	gameInfo.put("scores", new JSONArray(Arrays.asList(scores)));
+        	gameInfo.put("trick", new JSONArray());
+        } catch (JSONException e) {
+        	e.printStackTrace();
+        }
+        networkingDelegate.updatedGame(gameInfo);
+        
+        //Now begin the game
         this.process(new JSONObject());
     }
 
@@ -75,7 +103,6 @@ public class EuchreGame extends Game {
         
         try {
 			for (int i = 0; i < players.size(); i++) {
-				// TODO: There's no reason to store hands here, they should be in the Players.
 				JSONObject playerUpdate = new JSONObject();
 				playerUpdate.put("target", "player");
 			    playerUpdate.put("hand", new JSONArray(Arrays.asList(hands[i])));
@@ -85,6 +112,9 @@ public class EuchreGame extends Game {
 			JSONObject gameUpdate = new JSONObject();
 			gameUpdate.put("target", "game");
 			gameUpdate.put("topCard", topCard);
+			gameUpdate.put("trump", "none");
+			gameUpdate.put("trick", new JSONArray(Arrays.asList(trick)));
+			gameUpdate.put("tricksTaken", new JSONArray(Arrays.asList(tricksTaken)));
 			networkingDelegate.updatedGame(gameUpdate);
 		}
         catch (JSONException e) {
@@ -267,6 +297,7 @@ public class EuchreGame extends Game {
         if (state != 11) return;
         
         trickIndex = 0;
+        trick = new String[4];
         
         try {
             int winner = findWinner();
@@ -642,21 +673,13 @@ public class EuchreGame extends Game {
     
     public Hashtable<String, Object> getUIInfo(Player aPlayer) {
     	Hashtable<String, Object> props = new Hashtable<String, Object>();
-    	
-    	// TODO: This should just be data stored on the Player
-    	int playerIndex = players.indexOf(aPlayer);
-    	int partnerIndex = (playerIndex + 2) % 4;
-        String partnerName = players.get(partnerIndex).get("name").toString();
-        
-    	props.put("index", playerIndex);
-    	props.put("partner", partnerName);
-    	
+    	    	
 	    props.put("scores", new JSONArray(Arrays.asList(scores)));
 	    props.put("tricksTaken", new JSONArray(Arrays.asList(tricksTaken)));
 	    props.put("trick", new JSONArray(Arrays.asList(trick)));
     	
     	if (state < 5) {
-    		props.put("topCard", topCard);
+    		if (topCard != null) props.put("topCard", topCard);
     	}
     	if (trump != -1) {
     		props.put("trump", suits[trump]);

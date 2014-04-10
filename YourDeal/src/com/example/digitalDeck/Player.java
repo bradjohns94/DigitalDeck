@@ -65,6 +65,7 @@ public class Player {
      */
     public void updateProperties(JSONObject update) {
         helperUpdate(update, properties);
+        System.out.println("Properties are now: " + update);
         if (YourDealApplication.currentUI != null) { // TODO: Decouple this
             YourDealApplication.currentUI.updateUI();
         }
@@ -78,6 +79,7 @@ public class Player {
      * to another dictionary the subdictionary is updated recursively
      */
     private void helperUpdate(JSONObject update, JSONObject old) {
+    	System.out.println("Updating player with: " + update);
     	Iterator<String> iterator = update.keys();
     	try {
     		while (iterator.hasNext()) {
@@ -89,6 +91,7 @@ public class Player {
     				}
     			}
     			old.put(key, update.get(key));
+    			System.out.println("Added player info: " + key + " : " + update.get(key));
     		}
     	}
     	catch (JSONException e) {

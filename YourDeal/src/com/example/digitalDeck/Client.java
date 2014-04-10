@@ -131,10 +131,10 @@ public class Client implements NetworkingDelegate, StreamDelegate {
                 if (data.has("removePlayer")) {
                     game.removePlayer(game.getPlayerNamed((String)data.get("removePlayer")));
                 }
-                
-                if (data.has("action")) {
+                //This part commented out by brad
+                //if (data.has("action")) {
                     game.process(data);
-                }
+                //}
             }
             else if (data.get("target").equals("player")) {
                 YourDealApplication.localPlayer.updateProperties(data);

@@ -65,11 +65,14 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	public void drawGame() {
 		System.out.println("Updating UI");
 		JSONArray hand = (JSONArray)localPlayer.get("hand");
+		Object partnerObj = localPlayer.get("partner");
+		String partner = "";
+		if (partnerObj != null) partner = partnerObj.toString();
+		System.out.println("Partner = " + partner);
 		Hashtable<String, Object> UIProps = game.getUIInfo(localPlayer);
-		int index = (Integer)UIProps.get("index");
+		int index = (Integer)localPlayer.get("index");
 		int teamIndex = index % 2;
-		if (partner == null) {
-			partner = (String)UIProps.get("partner");
+		if (partner != null) {
 			TextView partnerText = (TextView)findViewById(R.id.partner);
 			partnerText.setText("Partner: " + partner);
 		}
@@ -113,6 +116,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 					toDraw.setPadding(0, 0, 0, 0);
 				}
 				toDraw.setImageResource(resID);
+				toDraw.setVisibility(View.VISIBLE);
 				try {
 					imageByName.put(hand.getString(i), toDraw);
 					nameByImage.put(toDraw, hand.getString(i));
@@ -144,7 +148,8 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		
 		//Draw the current trump
-		String trumpString = UIProps.get("trump").toString();
+		String trumpString = "none";
+		if (UIProps.get("trump") != null) trumpString = UIProps.get("trump").toString();
 		ImageView trumpImg = (ImageView)findViewById(R.id.trumpPic);
 		if (!trumpString.equals("none")) {
 			switch (trumpString.charAt(0)) {
@@ -169,11 +174,14 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		//Draw the current trick
 		JSONArray trick = (JSONArray)UIProps.get("trick");
 		int trickPosition = 0;
-		for (int i = 0; i < trick.length(); i++) {
-			try {
-				if (trick.getString(i) != null) trickPosition++;
-			} catch(JSONException e) {
-				e.printStackTrace();
+		//This is hacky and terrible
+		if (trick != null) {
+			for (int i = 0; i < trick.length(); i++) {
+				try {
+					if (trick.getString(i) != null) trickPosition++;
+				} catch(JSONException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		int start = 4 - trickPosition;
@@ -228,7 +236,8 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		
 		//Draw the topCard if applicable
-		String topCard = UIProps.get("topCard").toString();
+		String topCard = null;
+		if (UIProps.get("topCard") != null) topCard = UIProps.get("topCard").toString();
 		ImageView img = (ImageView)findViewById(R.id.topCard);
 		if (topCard != null) {
 			if (topCard.charAt(0) == '9') topCard.replace('9', 'n');
@@ -244,27 +253,53 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		
 		//Draw trickCount information
 		JSONArray trickCount = (JSONArray)UIProps.get("tricksTaken");
+		try {
+			if (trickCount != null) trickCount = (JSONArray)trickCount.get(0); //Super hacky, but if it works it works
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 		TextView tricksWon = (TextView)findViewById(R.id.tricksWon);
 		TextView tricksLost = (TextView)findViewById(R.id.tricksLost);
 		try {
-			tricksWon.setText("Tricks Won: " + Integer.toString(trickCount.getInt(teamIndex)));
-			tricksLost.setText("Tricks Lost: " + Integer.toString(trickCount.getInt((index + 1) % 2)));
+			if (trickCount != null) {
+				System.out.println("Tricks Won = " + trickCount);
+				tricksWon.setText("Tricks Won: " + Integer.toString(trickCount.getInt(teamIndex)));
+				tricksLost.setText("Tricks Lost: " + Integer.toString(trickCount.getInt((index + 1) % 2)));
+			}
 		} catch(JSONException e) {
 			e.printStackTrace();
 		}
 		
 		//Draw scoring information
 		JSONArray scores = (JSONArray)UIProps.get("scores");
+		try {
+			if (scores != null) scores = (JSONArray)scores.get(0); //Super hacky, but if it works it works
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
 		TextView scoreFor = (TextView)findViewById(R.id.yourScore);
 		TextView scoreAgainst = (TextView)findViewById(R.id.opponentScore);
 		try {
-			scoreFor.setText("Your Score: " + Integer.toString(scores.getInt(teamIndex)));
-			scoreAgainst.setText("Opponent Score: " + Integer.toString(scores.getInt((index + 1) % 2)));
+			if (scores != null) {
+				System.out.println("Scores: " + scores);
+				System.out.println("scores weren't null!");
+				scoreFor.setText("Your Score: " + Integer.toString(scores.getInt(teamIndex)));
+				scoreAgainst.setText("Opponent Score: " + Integer.toString(scores.getInt((index + 1) % 2)));
+			}
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
 		TextView message = (TextView)findViewById(R.id.message);
 		message.setVisibility(View.INVISIBLE);
+		
+		try {
+			JSONObject query = new JSONObject();
+			Object action = localPlayer.get("action");
+			query.put("action", action);
+			queryUser(query);
+		} catch (JSONException e) {
+			System.out.println("No need to query");
+		}
 	}
 	
 	/**queryUser

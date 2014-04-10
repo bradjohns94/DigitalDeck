@@ -59,7 +59,7 @@ public class LobbyActivity extends Activity implements UIDelegate, OnClickListen
         }
         
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        Player newPlayer = new Player(prefs.getString("display_name", "The Man in the Tan Jacket"));
+        Player newPlayer = new Player(prefs.getString("display_name", "The Guy Who Hasn't Checked Settings"));
         YourDealApplication.localPlayer = newPlayer;
         YourDealApplication.game.addPlayer(newPlayer);
         

@@ -1,7 +1,10 @@
 package com.example.digitalDeck;
 
+import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.Iterator;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 public class RemoteGame extends Game {
@@ -16,6 +19,7 @@ public class RemoteGame extends Game {
 	public RemoteGame(int aSize, String aTitle, String aType) {
 		super(aSize, aTitle);
 		type = aType;
+		uiInfo = new Hashtable<String, Object>();
 	}
 
 	@Override
@@ -25,9 +29,19 @@ public class RemoteGame extends Game {
 
 	@Override
 	public void process(JSONObject info) {
-		networkingDelegate.updatedGame(info);
+		System.out.println("Adding info: " + info);
+		Iterator iterator = info.keys();
+		while (iterator.hasNext()) {
+			String key = iterator.next().toString();
+			try {
+				uiInfo.put(key, info.get(key));
+				System.out.println("added: " + key + " : " + info.get(key));
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
 	}
-
+	
     @Override
     public void start() {
         
@@ -39,12 +53,12 @@ public class RemoteGame extends Game {
         props.putAll(uiInfo);
         
         // TODO: This should just be data stored on the Player
-        int playerIndex = players.indexOf(aPlayer);
+        /*int playerIndex = players.indexOf(aPlayer);
         int partnerIndex = (playerIndex + 2) % 4;
         String partnerName = players.get(partnerIndex).get("name").toString();
         
         props.put("index", playerIndex);
-        props.put("partner", partnerName);
+        props.put("partner", partnerName);*/
         
         return props;
     }
