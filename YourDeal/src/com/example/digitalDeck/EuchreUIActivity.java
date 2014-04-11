@@ -314,13 +314,15 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	public void queryUser(JSONObject info) {
 		try {
             String key = info.get("action").toString();
+            localPlayer.put("action", ""); //Try to stop multiple dialogs from forming
+            
             TextView displayMessage = (TextView)findViewById(R.id.message);
             if (key == null) return;
             clickable = new ArrayList<ImageView>();
             if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
             	String card = (String)game.getUIInfo(localPlayer).get("topCard");
             	String[] options = {"Pick it up", "Pass"};
-            	String message = getSuit(card) + "was turned up";
+            	String message = getSuit(card) + " was turned up";
             	drawBooleanDialog(options, message, "Your Turn");
             } else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
             	String message = "";
@@ -329,13 +331,14 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
             	} else {
             		message = "Select a Card to Play";
             	}
+            	System.out.println("Querying drop card");
             	displayMessage.setText(message);
             	displayMessage.setVisibility(View.VISIBLE);
-            	JSONArray plays = (JSONArray)info.get(key);
+            	JSONArray plays = (JSONArray)localPlayer.get("validCards");
             	for (int i = 0; i < plays.length(); i++) {
             		ImageView canClick = null;
 	            	try {
-	            		canClick = imageByName.get(plays.get(i));
+	            		canClick = imageByName.get(plays.getString(i));
 	            	} catch (JSONException e) {
 	            		e.printStackTrace();
 	            	}
@@ -375,6 +378,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
             				response.put("action", "response");
             				response.put("response", handler.getSelected());
             				game.process(response);
+            				dialog.cancel();
             			} catch (JSONException e) {
             				e.printStackTrace();
             			}
@@ -388,6 +392,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
             				response.put("action", "response");
             				response.put("response", "pass");
             				game.process(response);
+            				dialog.cancel();
             			} catch (JSONException e) {
             				e.printStackTrace();
             			}
@@ -415,13 +420,16 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	 * is invalid this method should inform the user of such.
 	 */
 	public void processInput(View pressed) {
+		System.out.println("Card was clicked!");
 		if (!(pressed instanceof ImageView)) return;
 		ImageView image = (ImageView)pressed;
 		if (clickable.contains(image)) {
 			if (clicked == null || !image.equals(clicked)) { //If the card has not received its first click
+				System.out.println("Valid card was clicked for the first time!");
 				clicked = image;
 				image.setPadding(0, 0, 0, 5);
 			} else { //Second click for confirmation
+				System.out.println("Valid card was clicked for the second time!");
 				clicked = null;
 				clickable = new ArrayList<ImageView>();
 				String play = nameByImage.get(image);
@@ -457,7 +465,9 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
         		try {
         			response.put("action", "response");
         			response.put("response", "call");
+        			System.out.println("Sending response to game");
         			game.process(response);
+        			dialog.cancel();
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
@@ -470,13 +480,16 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
         		try {
         			response.put("action", "response");
         			response.put("response", "pass");
+        			System.out.println("Sending response to game");
         			game.process(response);
+        			dialog.cancel();
         		} catch (JSONException e) {
         			e.printStackTrace();
         		}
         	}
         });
-        dialogBuilder.show();
+        AlertDialog dialog = dialogBuilder.create();
+        if (!dialog.isShowing()) dialog.show();
 	}
 	
 	/**getSuit

@@ -6,7 +6,7 @@ import org.json.*;
 
 //TODO: group puts to make more efficient
 public class EuchreGame extends Game {
-    private static final String[] vals = {"9", "T", "J", "Q", "K", "A"}; 
+    private static final String[] vals = {"N", "T", "J", "Q", "K", "A"}; 
     private static final String[] suits = {"S", "C", "H", "D"};
 
     private int state; //An integer representation of the state of the game
@@ -141,7 +141,7 @@ public class EuchreGame extends Game {
 			    trump = getSuit(topCard);
 			    JSONObject updates = new JSONObject();
 			    updates.put("target", "game");
-			    updates.put("trump", new JSONArray(Arrays.asList(suits[trump])));
+			    updates.put("trump", suits[trump]);
 			    networkingDelegate.updatedGame(updates);
 			    state = 3;
 			} else { // If trump was not called
@@ -162,10 +162,12 @@ public class EuchreGame extends Game {
 
     public void processDropCard(String toDrop) {
         try {
-			String[] dealerHand = (String[]) players.get(dealer).get("hand");
-			int index = getIndex(dealerHand, toDrop);
+			JSONArray dealerHand = (JSONArray)players.get(dealer).get("hand");
+			String[] dealerArray = new String[dealerHand.length()];
+			for (int i = 0; i < dealerArray.length; i++) dealerArray[i] = dealerHand.getString(i);
+			int index = getIndex(dealerArray, toDrop);
 			if (index != -1) {
-			    dealerHand[index] = topCard;
+			    dealerHand.put(index, topCard);
 			}
 			state = 5;
 			
@@ -181,8 +183,8 @@ public class EuchreGame extends Game {
 		}
     }
 
-    public void processLoner(boolean response) {
-        if (response) {
+    public void processLoner(String response) {
+        if (response.equals("Yes")) {
             int partner = (playerTurn + 2) % gameSize;
             players.get(partner).put("hand", null);
         }
@@ -378,13 +380,18 @@ public class EuchreGame extends Game {
 			    case 3:
 			        //drop card request
 			        String[] cards = new String[6];
-			        String[] hand = (String[])players.get(dealer).get("hand");
-			        for (int i = 0; i < hand.length; i++) {
-			            cards[i] = hand[i];
+			        JSONArray hand = (JSONArray)players.get(dealer).get("hand");
+			        for (int i = 0; i < hand.length(); i++) {
+			        	try {
+			        		cards[i] = hand.getString(i);
+			        	} catch (JSONException e) {
+			        		e.printStackTrace();
+			        	}
 			        }
-			        cards[5] = topCard;
+			        cards[hand.length()] = topCard;
 			        key = "drop";
 			        dict.put("validCards", new JSONArray(Arrays.asList(cards)));
+			        playerTurn = dealer;
 			        break;
 			    case 5:
 			        //Loner request
@@ -393,25 +400,25 @@ public class EuchreGame extends Game {
 			    case 7:
 			        //make call request
 			        int index = 0;
-			        String[] calls = new String[4];
+			        String[] calls = new String[3];
 			        for (int i = 0; i < suits.length; i++) {
 			            if (i != getSuit(topCard)) {
 			                calls[index] = suits[i];
 			                index++;
 			            }
 			        }
-			        calls[3] = "pass"; //Disable for dealer if STD is on
+			        //calls[3] = "pass"; //Disable for dealer if STD is on
 			        key = "call";
-			        dict.put("validCalls", calls);
+			        dict.put("validCalls", Arrays.asList(calls));
 			        break;
 			    case 9:
 			        //play card request
 			        index = 0;
-			        hand = (String[])players.get(playerTurn).get("hand");
-			        String[] playable = new String[hand.length];
+			        hand = (JSONArray)players.get(playerTurn).get("hand");
+			        String[] playable = new String[hand.length()];
 			        for (int i = 0; i < playable.length; i++) {
-			            if (canPlay(hand[i])) {
-			                playable[index] = hand[i];
+			            if (canPlay(hand.getString(i))) {
+			                playable[index] = hand.getString(i);
 			            }
 			        }
 			        key = "play";
@@ -650,7 +657,7 @@ public class EuchreGame extends Game {
                 processDropCard(info.get(key).toString());
                 break;
             case 6:
-                processLoner((Boolean)info.get(key));
+                processLoner((String)info.get(key));
                 break;
             case 8:
                 processCall2(info.get(key).toString());

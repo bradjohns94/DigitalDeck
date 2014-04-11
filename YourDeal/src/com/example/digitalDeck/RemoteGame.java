@@ -30,16 +30,25 @@ public class RemoteGame extends Game {
 	@Override
 	public void process(JSONObject info) {
 		System.out.println("Adding info: " + info);
-		Iterator iterator = info.keys();
-		while (iterator.hasNext()) {
-			String key = iterator.next().toString();
-			try {
-				uiInfo.put(key, info.get(key));
-				System.out.println("added: " + key + " : " + info.get(key));
-			} catch (JSONException e) {
-				e.printStackTrace();
+		if (info.has("response")) {
+			forwardResponse(info);
+		} else {
+			Iterator iterator = info.keys();
+			while (iterator.hasNext()) {
+				String key = iterator.next().toString();
+				try {
+					uiInfo.put(key, info.get(key));
+					System.out.println("added: " + key + " : " + info.get(key));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
 			}
 		}
+	}
+	
+	private void forwardResponse(JSONObject info) {
+		System.out.println("Responding to server");
+		networkingDelegate.updatedGame(info);
 	}
 	
     @Override
