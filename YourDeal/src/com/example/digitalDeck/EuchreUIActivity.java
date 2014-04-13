@@ -29,6 +29,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	private ImageView clicked;
 	private Hashtable<String, ImageView> imageByName;
 	private Hashtable<ImageView, String> nameByImage;
+	private boolean showMessage = false;
 
 	/**onCreate
 	 * @param savedInstance used by eclipse when creating the activity
@@ -38,20 +39,19 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_euchre_ui);
-		
+
 		YourDealApplication.currentUI = this;
-		System.out.println("Oh hai, I'm changing");
-		
+
 		clickable = new ArrayList<ImageView>();
 		clicked = null;
 		game = YourDealApplication.game;
 		localPlayer = YourDealApplication.localPlayer;
-		
+
 		imageByName = new Hashtable<String, ImageView>();
 		nameByImage = new Hashtable<ImageView, String>();
 		game.start();
 	}
-	
+
 	/**updateUI
 	 * Analyzes all components for the UI to display from the getUIInfo class of the game object
 	 * then draws them to the screen. Displays include the following:
@@ -68,7 +68,6 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		Object partnerObj = localPlayer.get("partner");
 		String partner = "";
 		if (partnerObj != null) partner = partnerObj.toString();
-		System.out.println("Partner = " + partner);
 		Hashtable<String, Object> UIProps = game.getUIInfo(localPlayer);
 		int index = (Integer)localPlayer.get("index");
 		int teamIndex = index % 2;
@@ -76,7 +75,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			TextView partnerText = (TextView)findViewById(R.id.partner);
 			partnerText.setText("Partner: " + partner);
 		}
-		
+
 		//Draw the players current hand
 		for (int i = 0; i < hand.length(); i++) {
 			String card = null;
@@ -91,24 +90,24 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 				if (fileName.charAt(0) == '9') fileName.replace('9', 'n');
 				fileName = fileName.toLowerCase(); //because android naming rules
 				int resID = getResources().getIdentifier(fileName, "drawable", "com.example.digitalDeck");
-				
+
 				// TODO: plz no
 				switch (i) {
-					case 0:
-						toDraw = (ImageView)findViewById(R.id.hand1);
-						break;
-					case 1:
-						toDraw = (ImageView)findViewById(R.id.hand2);
-						break;
-					case 2:
-						toDraw = (ImageView)findViewById(R.id.hand3);
-						break;
-					case 3:
-						toDraw = (ImageView)findViewById(R.id.hand4);
-						break;
-					case 4:
-						toDraw = (ImageView)findViewById(R.id.hand5);
-						break;
+				case 0:
+					toDraw = (ImageView)findViewById(R.id.hand1);
+					break;
+				case 1:
+					toDraw = (ImageView)findViewById(R.id.hand2);
+					break;
+				case 2:
+					toDraw = (ImageView)findViewById(R.id.hand3);
+					break;
+				case 3:
+					toDraw = (ImageView)findViewById(R.id.hand4);
+					break;
+				case 4:
+					toDraw = (ImageView)findViewById(R.id.hand5);
+					break;
 				}
 				if (toDraw.equals(clicked)) {
 					toDraw.setPadding(0, 0, 0, 5);
@@ -128,49 +127,49 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		for (int i = hand.length(); i < 5; i++) {
 			ImageView toDisable = null;
 			switch (i) {
-				case 0:
-					toDisable = (ImageView)findViewById(R.id.hand1);
-					break;
-				case 1:
-					toDisable = (ImageView)findViewById(R.id.hand2);
-					break;
-				case 2:
-					toDisable = (ImageView)findViewById(R.id.hand3);
-					break;
-				case 3:
-					toDisable = (ImageView)findViewById(R.id.hand4);
-					break;
-				case 4:
-					toDisable = (ImageView)findViewById(R.id.hand5);
-					break;	
+			case 0:
+				toDisable = (ImageView)findViewById(R.id.hand1);
+				break;
+			case 1:
+				toDisable = (ImageView)findViewById(R.id.hand2);
+				break;
+			case 2:
+				toDisable = (ImageView)findViewById(R.id.hand3);
+				break;
+			case 3:
+				toDisable = (ImageView)findViewById(R.id.hand4);
+				break;
+			case 4:
+				toDisable = (ImageView)findViewById(R.id.hand5);
+				break;	
 			}
 			if (toDisable != null) toDisable.setVisibility(View.INVISIBLE);
 		}
-		
+
 		//Draw the current trump
 		String trumpString = "none";
 		if (UIProps.get("trump") != null) trumpString = UIProps.get("trump").toString();
 		ImageView trumpImg = (ImageView)findViewById(R.id.trumpPic);
 		if (!trumpString.equals("none")) {
 			switch (trumpString.charAt(0)) {
-				case 'C':
-					trumpImg.setImageResource(R.drawable.clubs);
-					break;
-				case 'S':
-					trumpImg.setImageResource(R.drawable.spades);
-					break;
-				case 'H':
-					trumpImg.setImageResource(R.drawable.hearts);
-					break;
-				case 'D':
-					trumpImg.setImageResource(R.drawable.diamonds);
-					break;
+			case 'C':
+				trumpImg.setImageResource(R.drawable.clubs);
+				break;
+			case 'S':
+				trumpImg.setImageResource(R.drawable.spades);
+				break;
+			case 'H':
+				trumpImg.setImageResource(R.drawable.hearts);
+				break;
+			case 'D':
+				trumpImg.setImageResource(R.drawable.diamonds);
+				break;
 			}
 			trumpImg.setVisibility(View.VISIBLE);
 		} else {
 			trumpImg.setVisibility(View.INVISIBLE);
 		}
-		
+
 		//Draw the current trick
 		JSONArray trick = (JSONArray)UIProps.get("trick");
 		int trickPosition = 0;
@@ -186,6 +185,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 		int start = 4 - trickPosition;
 		ImageView toChange = null;
+		if (trick != null) System.out.println("trick is: " + trick);
 		for (int i = 0; i < trickPosition; i++) {
 			if (start == 0) break;
 			int toDraw = start + i;
@@ -197,24 +197,24 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			}
 			if (fileName.charAt(0) == '9') fileName.replace('9', 'n');
 			fileName = fileName.toLowerCase(); //because android naming rules
-			System.out.println("Drawing image with filename: " + fileName);
 			if (fileName == null) { //This shouldn't be possible but its happening...
 				trickPosition--;
 				continue;
 			}
+			System.out.println("filename = " + fileName);
 			int resID = getResources().getIdentifier(fileName, "drawable", "com.example.digitalDeck");
 			switch (toDraw) {
-				case 1:
-					toChange = (ImageView)findViewById(R.id.leftPlayerCard);
-					break;
-				case 2:
-					toChange = (ImageView)findViewById(R.id.partnerCard);
-					break;
-				case 3:
-					toChange = (ImageView)findViewById(R.id.rightPlayerCard);
-					break;
-				default:
-					System.out.println("Your logic is bad and you should feel bad");
+			case 1:
+				toChange = (ImageView)findViewById(R.id.leftPlayerCard);
+				break;
+			case 2:
+				toChange = (ImageView)findViewById(R.id.partnerCard);
+				break;
+			case 3:
+				toChange = (ImageView)findViewById(R.id.rightPlayerCard);
+				break;
+			default:
+				System.out.println("Your logic is bad and you should feel bad");
 			}
 			toChange.setImageResource(resID);
 			toChange.setVisibility(View.VISIBLE);
@@ -222,24 +222,24 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		for (int i = start - 1; i > 0; i--) {
 			ImageView toDisable = null;
 			switch (i) {
-				case 1:
-					toDisable = (ImageView)findViewById(R.id.leftPlayerCard);
-					break;
-				case 2:
-					toDisable = (ImageView)findViewById(R.id.partnerCard);
-					break;
-				case 3:
-					toDisable = (ImageView)findViewById(R.id.rightPlayerCard);
-					break;
+			case 1:
+				toDisable = (ImageView)findViewById(R.id.leftPlayerCard);
+				break;
+			case 2:
+				toDisable = (ImageView)findViewById(R.id.partnerCard);
+				break;
+			case 3:
+				toDisable = (ImageView)findViewById(R.id.rightPlayerCard);
+				break;
 			}
 			if (toDisable != null) toDisable.setVisibility(View.INVISIBLE);
 		}
-		
+
 		//Draw the topCard if applicable
 		String topCard = null;
 		if (UIProps.get("topCard") != null) topCard = UIProps.get("topCard").toString();
 		ImageView img = (ImageView)findViewById(R.id.topCard);
-		if (topCard != null) {
+		if (topCard != null && !topCard.equals("none")) {
 			if (topCard.charAt(0) == '9') topCard.replace('9', 'n');
 			topCard = topCard.toLowerCase(); //because android naming rules
 			int resID = getResources().getIdentifier(topCard, "drawable", "com.example.digitalDeck");
@@ -247,10 +247,10 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			img.setVisibility(View.VISIBLE);
 			imageByName.put(topCard, img);
 			nameByImage.put(img, topCard);
-		} else {
+		} else if (topCard != null && topCard.equals("none")){
 			img.setVisibility(View.INVISIBLE);
 		}
-		
+
 		//Draw trickCount information
 		JSONArray trickCount = (JSONArray)UIProps.get("tricksTaken");
 		try {
@@ -262,14 +262,13 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		TextView tricksLost = (TextView)findViewById(R.id.tricksLost);
 		try {
 			if (trickCount != null) {
-				System.out.println("Tricks Won = " + trickCount);
 				tricksWon.setText("Tricks Won: " + Integer.toString(trickCount.getInt(teamIndex)));
 				tricksLost.setText("Tricks Lost: " + Integer.toString(trickCount.getInt((index + 1) % 2)));
 			}
 		} catch(JSONException e) {
 			e.printStackTrace();
 		}
-		
+
 		//Draw scoring information
 		JSONArray scores = (JSONArray)UIProps.get("scores");
 		try {
@@ -281,8 +280,6 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		TextView scoreAgainst = (TextView)findViewById(R.id.opponentScore);
 		try {
 			if (scores != null) {
-				System.out.println("Scores: " + scores);
-				System.out.println("scores weren't null!");
 				scoreFor.setText("Your Score: " + Integer.toString(scores.getInt(teamIndex)));
 				scoreAgainst.setText("Opponent Score: " + Integer.toString(scores.getInt((index + 1) % 2)));
 			}
@@ -290,18 +287,18 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			e.printStackTrace();
 		}
 		TextView message = (TextView)findViewById(R.id.message);
-		message.setVisibility(View.INVISIBLE);
-		
+		if (!showMessage) message.setVisibility(View.INVISIBLE);
+
 		try {
 			JSONObject query = new JSONObject();
 			Object action = localPlayer.get("action");
 			query.put("action", action);
 			queryUser(query);
 		} catch (JSONException e) {
-			System.out.println("No need to query");
+			e.printStackTrace();
 		}
 	}
-	
+
 	/**queryUser
 	 * @param info a hashtable of information used to query the user
 	 * Decides based on the information type received from the "action" key of the passed
@@ -312,106 +309,119 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	 * 4. Prompt the user on to whether or not they would like to decide trump
 	 */
 	public void queryUser(JSONObject info) {
+		String key = null;
 		try {
-            String key = info.get("action").toString();
-            localPlayer.put("action", ""); //Try to stop multiple dialogs from forming
-            
-            TextView displayMessage = (TextView)findViewById(R.id.message);
-            if (key == null) return;
-            clickable = new ArrayList<ImageView>();
-            if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
-            	String card = (String)game.getUIInfo(localPlayer).get("topCard");
-            	String[] options = {"Pick it up", "Pass"};
-            	String message = getSuit(card) + " was turned up";
-            	drawBooleanDialog(options, message, "Your Turn");
-            } else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
-            	String message = "";
-            	if (key.equals("drop")) {
-            		message = "Select a Card to Put Down";
-            	} else {
-            		message = "Select a Card to Play";
-            	}
-            	System.out.println("Querying drop card");
-            	displayMessage.setText(message);
-            	displayMessage.setVisibility(View.VISIBLE);
-            	JSONArray plays = (JSONArray)localPlayer.get("validCards");
-            	for (int i = 0; i < plays.length(); i++) {
-            		ImageView canClick = null;
-	            	try {
-	            		canClick = imageByName.get(plays.getString(i));
-	            	} catch (JSONException e) {
-	            		e.printStackTrace();
-	            	}
-            		if (canClick != null) clickable.add(canClick);
-            	}
-            } else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
-            	String[] options = {"Yes", "No"};
-            	drawBooleanDialog(options, "Go alone?", "");
-            } else if (key.equals("call")) { //Prompt the user to choose trump from the list provided or to pass
-            	AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
-                dialogBuilder.setMessage("Select Game Type");
-                dialogBuilder.setTitle("Game Settings");
-            	//String[] options = (String[])info.get(key);
-                JSONArray JSONOptions = (JSONArray)info.get(key);
-                String[] options = new String[JSONOptions.length()];
-                for (int i = 0; i < options.length; i++) {
-                	try {
-                		options[i] = JSONOptions.getString(i);
-                	} catch (JSONException e) {
-                		e.printStackTrace();
-                	}
-                }
-            	RadioGroup group = new RadioGroup(this);
-            	for (int i = 0; i < options.length; i++) {
-            		if (options[i].equals("pass")) continue;
-            		RadioButton button = new RadioButton(this);
-            		button.setText(options[i]);
-            		group.addView(button);
-            	}
-            	final RadioHandler handler = new RadioHandler();
-            	group.setOnCheckedChangeListener(handler);
-            	dialogBuilder.setPositiveButton("Select", new DialogInterface.OnClickListener() {
-            		@Override
-            		public void onClick(DialogInterface dialog, int which) {
-            			try {
-            				JSONObject response = new JSONObject();
-            				response.put("action", "response");
-            				response.put("response", handler.getSelected());
-            				game.process(response);
-            				dialog.cancel();
-            			} catch (JSONException e) {
-            				e.printStackTrace();
-            			}
-            		}
-            	}); //TODO make this forward the selected
-            	dialogBuilder.setNegativeButton("Pass", new DialogInterface.OnClickListener() {
-            		@Override
-            		public void onClick(DialogInterface dialog, int which) {
-            			try {
-            				JSONObject response = new JSONObject();
-            				response.put("action", "response");
-            				response.put("response", "pass");
-            				game.process(response);
-            				dialog.cancel();
-            			} catch (JSONException e) {
-            				e.printStackTrace();
-            			}
-            		}
-            	});
-            	LinearLayout layout = new LinearLayout(this);
-                layout.setOrientation(LinearLayout.VERTICAL);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
-                group.setLayoutParams(params);
-                layout.addView(group);
-                dialogBuilder.setView(layout);
-                dialogBuilder.show();
-            }
-        }
-        catch (JSONException e) {
-            e.printStackTrace();
-        }
+			key = info.get("action").toString();
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		//localPlayer.put("action", ""); //Try to stop multiple dialogs from forming
+		System.out.println("Querying user");
+		TextView displayMessage = (TextView)findViewById(R.id.message);
+		if (key == null) return;
+		//clickable = new ArrayList<ImageView>();
+		if (key.equals("turn")) { //Prompt the user to pass or have the dealer pick it up
+			String card = (String)game.getUIInfo(localPlayer).get("topCard");
+			String[] options = {"Pick it up", "Pass"};
+			String message = getSuit(card.charAt(1)) + " was turned up";
+			drawBooleanDialog(options, message, "Your Turn");
+		} else if (key.equals("drop") || key.equals("play")) { //Provide the user with a list of playable cards and wait on a response
+			String message = "";
+			if (key.equals("drop")) {
+				System.out.println("Querying drop");
+				message = "Select a Card to Put Down";
+			} else {
+				System.out.println("Querying play");
+				message = "Select a Card to Play";
+			}
+			clickable = new ArrayList<ImageView>();
+			showMessage = true;
+			displayMessage.setText(message);
+			displayMessage.setVisibility(View.VISIBLE);
+			JSONArray plays = (JSONArray)localPlayer.get("validCards");
+			try {
+				plays = plays.getJSONArray(0);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			System.out.println("Entering for loop with JSONArray: " + plays);
+			for (int i = 0; i < plays.length(); i++) {
+				ImageView canClick = null;
+				try {
+					canClick = imageByName.get(plays.getString(i));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+				if (canClick != null) clickable.add(canClick);
+			}
+			System.out.println("Clickable list is now: " + clickable);
+		} else if (key.equals("lone")) { //Prompt the user on whether or not they wish to go alone
+			String[] options = {"Yes", "No"};
+			drawBooleanDialog(options, "Go alone?", "");
+		} else if (key.equals("call")) { //Prompt the user to choose trump from the list provided or to pass
+			AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
+			dialogBuilder.setMessage("Select Game Type");
+			dialogBuilder.setTitle("Game Settings");
+			//String[] options = (String[])info.get(key);
+			JSONArray JSONOptions = (JSONArray)localPlayer.get("validCalls");
+			String[] options = new String[JSONOptions.length()];
+			for (int i = 0; i < options.length; i++) {
+				try {
+					options[i] = getSuit(JSONOptions.getString(i).charAt(0));
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
+			RadioGroup group = new RadioGroup(this);
+			for (int i = 0; i < options.length; i++) {
+				if (options[i].equals("pass")) continue;
+				RadioButton button = new RadioButton(this);
+				button.setText(options[i]);
+				group.addView(button);
+			}
+			final RadioHandler handler = new RadioHandler();
+			group.setOnCheckedChangeListener(handler);
+			dialogBuilder.setPositiveButton("Select", new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					try {
+						JSONObject response = new JSONObject();
+						response.put("action", "response");
+						String selected = handler.getSelected().substring(0,1);
+						response.put("response", selected);
+						game.process(response);
+						dialog.cancel();
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+			});
+			dialogBuilder.setNegativeButton("Pass", new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					try {
+						JSONObject response = new JSONObject();
+						response.put("action", "response");
+						response.put("response", "pass");
+						game.process(response);
+						dialog.cancel();
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+				}
+			});
+			LinearLayout layout = new LinearLayout(this);
+			layout.setOrientation(LinearLayout.VERTICAL);
+			LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+			group.setLayoutParams(params);
+			layout.addView(group);
+			dialogBuilder.setView(layout);
+			dialogBuilder.setCancelable(false);
+			localPlayer.put("action", "");
+			dialogBuilder.show();
+		}
 	}
-	
+
 	/**processInput
 	 * @param pressed the view of the clicked object
 	 * checks whether the pressed card is of valid use to the game object at the current moment,
@@ -424,6 +434,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		if (!(pressed instanceof ImageView)) return;
 		ImageView image = (ImageView)pressed;
 		if (clickable.contains(image)) {
+			System.out.println("Image was in clickable");
 			if (clicked == null || !image.equals(clicked)) { //If the card has not received its first click
 				System.out.println("Valid card was clicked for the first time!");
 				clicked = image;
@@ -433,10 +444,12 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 				clicked = null;
 				clickable = new ArrayList<ImageView>();
 				String play = nameByImage.get(image);
+				localPlayer.put("action", "");
 				try {
 					JSONObject response = new JSONObject();
 					response.put("action", "response");
 					response.put("response", play);
+					showMessage = false;
 					game.process(response);
 				} catch (JSONException e) {
 					e.printStackTrace();
@@ -446,7 +459,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			//TODO write invalid click code
 		}
 	}
-	
+
 	/**drawBooleanDialog
 	 * @param options the options to give the dialog
 	 * @param message the message for the dialog to display
@@ -456,62 +469,63 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	 */
 	public void drawBooleanDialog(String[] options, String message, String title) {
 		AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this);
-        dialogBuilder.setMessage(message);
-        dialogBuilder.setTitle(title);
-        dialogBuilder.setPositiveButton(options[0], new DialogInterface.OnClickListener() {
-        	@Override
+		dialogBuilder.setMessage(message);
+		dialogBuilder.setTitle(title);
+		dialogBuilder.setPositiveButton(options[0], new DialogInterface.OnClickListener() {
+			@Override
 			public void onClick(DialogInterface dialog, int item) {
-        		JSONObject response = new JSONObject();
-        		try {
-        			response.put("action", "response");
-        			response.put("response", "call");
-        			System.out.println("Sending response to game");
-        			game.process(response);
-        			dialog.cancel();
-        		} catch (JSONException e) {
-        			e.printStackTrace();
-        		}
-        	}
-        });
-        dialogBuilder.setNegativeButton(options[1], new DialogInterface.OnClickListener() {
-        	@Override
+				JSONObject response = new JSONObject();
+				try {
+					response.put("action", "response");
+					response.put("response", "call");
+					System.out.println("Sending response to game");
+					game.process(response);
+					dialog.cancel();
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		dialogBuilder.setNegativeButton(options[1], new DialogInterface.OnClickListener() {
+			@Override
 			public void onClick(DialogInterface dialog, int item) {
-        		JSONObject response = new JSONObject();
-        		try {
-        			response.put("action", "response");
-        			response.put("response", "pass");
-        			System.out.println("Sending response to game");
-        			game.process(response);
-        			dialog.cancel();
-        		} catch (JSONException e) {
-        			e.printStackTrace();
-        		}
-        	}
-        });
-        AlertDialog dialog = dialogBuilder.create();
-        if (!dialog.isShowing()) dialog.show();
+				JSONObject response = new JSONObject();
+				try {
+					response.put("action", "response");
+					response.put("response", "pass");
+					System.out.println("Sending response to game");
+					game.process(response);
+					dialog.cancel();
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
+		});
+		dialogBuilder.setCancelable(false);
+		AlertDialog dialog = dialogBuilder.create();
+		localPlayer.put("action", "");
+		if (!dialog.isShowing()) dialog.show();
 	}
-	
+
 	/**getSuit
 	 * @param card the card to get the suit of
 	 * @return the suit of the passed card
 	 * get the suit of the card passed by the user
 	 */
-	public String getSuit(String card) {
-		char suitChar = card.charAt(1);
+	public String getSuit(char suitChar) {
 		switch (suitChar) {
-			case 'S':
-				return "Spades";
-			case 'C':
-				return "Clubs";
-			case 'H':
-				return "Hearts";
-			case 'D':
-				return "Diamonds";
+		case 'S':
+			return "Spades";
+		case 'C':
+			return "Clubs";
+		case 'H':
+			return "Hearts";
+		case 'D':
+			return "Diamonds";
 		}
 		return "";
 	}
-	
+
 	/**RadioHandler
 	 * @author Bradley Johns
 	 * handles the onCheckedChanged of an alertDialog and updates
@@ -520,9 +534,9 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 	 * the getSelected() method
 	 */
 	private class RadioHandler implements OnCheckedChangeListener {
-		
+
 		private String selected;
-		
+
 		/**RadioHandler constructor
 		 * initializes the selected variable to pass if the user never
 		 * presses a button
@@ -530,17 +544,17 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		public RadioHandler() {
 			selected = "pass";
 		}
-		
+
 		/**onCheckedChanged
 		 * @param group the group that had its checked option changed
 		 * @param id the id of the changed object
 		 * changes the selected string to that of the selected radioButton
 		 */
 		public void onCheckedChanged(RadioGroup group, int id) {
-			RadioButton checked = (RadioButton)findViewById(id);
+			RadioButton checked = (RadioButton)group.findViewById(id);
 			selected = checked.getText().toString();
 		}
-		
+
 		/**getSelected
 		 * @return the string of the selected radioButton
 		 * gives the rest of the program access to the selected radioButton
@@ -550,22 +564,22 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		}
 	}
 
-    @Override
-    public void lobbyIsClosing() {
-        // TODO: Use this for quitting the game
-    }
+	@Override
+	public void lobbyIsClosing() {
+		// TODO: Use this for quitting the game
+	}
 
-    @Override
-    public void gameIsStarting() {
-        // Probably not useful
-    }
+	@Override
+	public void gameIsStarting() {
+		// Probably not useful
+	}
 
-    @Override
-    public void updateUI() {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                drawGame();
-            }
-        });
-    }
+	@Override
+	public void updateUI() {
+		runOnUiThread(new Runnable() {
+			public void run() {
+				drawGame();
+			}
+		});
+	}
 }

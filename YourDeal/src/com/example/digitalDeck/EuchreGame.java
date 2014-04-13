@@ -195,12 +195,19 @@ public class EuchreGame extends Game {
         lead = -1;
         state = 9;
         
+        JSONObject gameUpdate = new JSONObject();
+        topCard = "none";
+        try {
+        	gameUpdate.put("topCard", "none");
+        } catch (JSONException e) {
+        	e.printStackTrace();
+        }
+		networkingDelegate.updatedGame(gameUpdate); 
+        
         process(new JSONObject());
     }
         
-    public void processCall2(String call) {
-        if (state != 4) return;
-        
+    public void processCall2(String call) {        
         try {
 			if (!call.equalsIgnoreCase("pass")) { //If the player called trump
 			    trump = getIndex(suits, call);
@@ -209,7 +216,7 @@ public class EuchreGame extends Game {
 			    
 			    JSONObject updates = new JSONObject();
 			    updates.put("target", "game");
-			    updates.put("trump", new JSONArray(Arrays.asList(suits[trump])));
+			    updates.put("trump", suits[trump]);
 			    networkingDelegate.updatedGame(updates);
 			}
 			else {
@@ -247,12 +254,12 @@ public class EuchreGame extends Game {
             }
             
             //Update hand
-            String[] hand = (String[])players.get(playerTurn).get("hand");
+            JSONArray hand = (JSONArray)players.get(playerTurn).get("hand");
             int index = 0;
-            String[] newHand = new String[hand.length - 1];
-            for (int i = 0; i < hand.length; i++) {
-                if (!hand[i].equalsIgnoreCase(play)) {
-                    newHand[index] = hand[i];
+            String[] newHand = new String[hand.length() - 1];
+            for (int i = 0; i < hand.length(); i++) {
+                if (!hand.getString(i).equalsIgnoreCase(play)) {
+                    newHand[index] = hand.getString(i);
                     index++;
                 }
             }
@@ -279,7 +286,7 @@ public class EuchreGame extends Game {
             }
             
             JSONObject played = new JSONObject();
-            played.put("cardPlayed", play);
+            played.put("trick", new JSONArray(Arrays.asList(trick)));
             networkingDelegate.updatedGame(played);
             
             process(new JSONObject());
@@ -372,6 +379,7 @@ public class EuchreGame extends Game {
         try {
 			dict.put("target", "player");
 			String key = "";
+			int target = playerTurn;
 			switch (state) {
 			    case 1:
 			        //pick up/pass request
@@ -392,10 +400,12 @@ public class EuchreGame extends Game {
 			        key = "drop";
 			        dict.put("validCards", new JSONArray(Arrays.asList(cards)));
 			        playerTurn = dealer;
+			        target = dealer;
 			        break;
 			    case 5:
 			        //Loner request
 			        key = "lone";
+			        target = caller;
 			        break;
 			    case 7:
 			        //make call request
@@ -409,16 +419,16 @@ public class EuchreGame extends Game {
 			        }
 			        //calls[3] = "pass"; //Disable for dealer if STD is on
 			        key = "call";
-			        dict.put("validCalls", Arrays.asList(calls));
+			        dict.put("validCalls", new JSONArray(Arrays.asList(calls)));
 			        break;
 			    case 9:
 			        //play card request
 			        index = 0;
 			        hand = (JSONArray)players.get(playerTurn).get("hand");
-			        String[] playable = new String[hand.length()];
-			        for (int i = 0; i < playable.length; i++) {
+			        JSONArray playable = new JSONArray();
+			        for (int i = 0; i < hand.length(); i++) {
 			            if (canPlay(hand.getString(i))) {
-			                playable[index] = hand.getString(i);
+			                playable.put(i, hand.getString(i));
 			            }
 			        }
 			        key = "play";
@@ -426,7 +436,7 @@ public class EuchreGame extends Game {
 			        break;
 			}
 			dict.put("action", key);
-			players.get(playerTurn).updateProperties(dict);
+			players.get(target).updateProperties(dict);
 			state++;
 		}
         catch (JSONException e) {
@@ -528,7 +538,10 @@ public class EuchreGame extends Game {
     private boolean isLeft(String card) {
         String val = card.substring(0, 1);
         if (!val.equalsIgnoreCase("J")) return false;
-        int suit = getSuit(card);
+        int suit = -1;
+        for (int i = 0; i < suits.length; i++) {
+        	if (card.substring(1,2).equals(suits[i])) suit = i;
+        }
         if (trump % 2 == 0) {
             if (suit == trump + 1) return true;
         } else {
@@ -551,10 +564,15 @@ public class EuchreGame extends Game {
         
         if (suit == lead) return true;
         
-        String[] hand = (String[])players.get(playerTurn).get("hand");
-        for (int i = 0; i < hand.length; i++) {
-            int handSuit = getSuit(hand[i]);
-            if (isLeft(hand[i])) handSuit = trump;
+        JSONArray hand = (JSONArray)players.get(playerTurn).get("hand");
+        for (int i = 0; i < hand.length(); i++) {
+        	int handSuit = -1;
+        	try {
+	            handSuit = getSuit(hand.getString(i));
+	            if (isLeft(hand.getString(i))) handSuit = trump;
+        	} catch (JSONException e) {
+        		e.printStackTrace();
+        	}
             
             if (handSuit == lead) return false;
         }

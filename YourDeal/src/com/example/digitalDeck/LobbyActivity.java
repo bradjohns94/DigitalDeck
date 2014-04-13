@@ -170,6 +170,12 @@ public class LobbyActivity extends Activity implements UIDelegate, OnClickListen
     public void startGame(View view) {
         Intent toUI = new Intent(this, EuchreUIActivity.class);
         YourDealApplication.networkingDelegate.gameIsStarting();
+        try {
+        	//give clients time to catch up
+        	Thread.sleep(1000);
+        } catch (InterruptedException e) {
+        	e.printStackTrace();
+        }
         startActivity(toUI);
     }
     
