@@ -176,16 +176,12 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 		//This is hacky and terrible
 		if (trick != null) {
 			for (int i = 0; i < trick.length(); i++) {
-				try {
-					if (trick.getString(i) != null) trickPosition++;
-				} catch(JSONException e) {
-					e.printStackTrace();
-				}
+				if (!trick.isNull(i)) trickPosition++;
 			}
 		}
 		int start = 4 - trickPosition;
 		ImageView toChange = null;
-		if (trick != null) System.out.println("trick is: " + trick);
+		if (trick != null) System.out.println("trick is: " + trick + " Trick Position is: " + trickPosition);
 		for (int i = 0; i < trickPosition; i++) {
 			if (start == 0) break;
 			int toDraw = start + i;
@@ -213,6 +209,8 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			case 3:
 				toChange = (ImageView)findViewById(R.id.rightPlayerCard);
 				break;
+			case 4:
+				toChange = (ImageView)findViewById(R.id.playerCard);
 			default:
 				System.out.println("Your logic is bad and you should feel bad");
 			}
@@ -247,7 +245,7 @@ public class EuchreUIActivity extends Activity implements UIDelegate {
 			img.setVisibility(View.VISIBLE);
 			imageByName.put(topCard, img);
 			nameByImage.put(img, topCard);
-		} else if (topCard != null && topCard.equals("none")){
+		} else if (topCard == null || topCard.equals("none")){
 			img.setVisibility(View.INVISIBLE);
 		}
 
